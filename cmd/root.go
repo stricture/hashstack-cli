@@ -23,13 +23,6 @@ var RootCmd = &cobra.Command{
 	},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		debug(fmt.Sprintf("running sub command %s", cmd.Name()))
-		for _, x := range authedSubCommands {
-			if x == cmd.Name() {
-				if flServerURL == "" || flToken == "" {
-					writeStdErrAndExit("you must initialize authentication with hashstack-cli auth")
-				}
-			}
-		}
 	},
 }
 
@@ -74,5 +67,11 @@ func init() {
 func debug(msg string) {
 	if flDebug {
 		fmt.Printf("DEBUG %s\n", msg)
+	}
+}
+
+func ensureAuth(cmd *cobra.Command, args []string) {
+	if flServerURL == "" || flToken == "" {
+		writeStdErrAndExit("use hashstack-cli auth before continuing")
 	}
 }
