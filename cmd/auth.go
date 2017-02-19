@@ -68,7 +68,7 @@ will be saved in your home directory for all additional requests.
 		default:
 			writeStdErrAndExit("unexpected response from server")
 		}
-		tomlString := fmt.Sprintf("server_url = %s\ntoken = %s", serverURL, response.Token)
+		tomlString := fmt.Sprintf("server_url = \"%s\"\ntoken = \"%s\"", serverURL, response.Token)
 		usr, err := user.Current()
 		if err != nil || usr.HomeDir == "" {
 			fmt.Println("Your home directory could not be located!")
