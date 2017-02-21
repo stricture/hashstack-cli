@@ -41,11 +41,22 @@ var listProjectCmd = &cobra.Command{
 }
 
 var getProjectCmd = &cobra.Command{
-	Use:    "get",
-	Short:  "Get information about a project by name",
-	Long:   "Get information about a project by name",
+	Use:    "get [id]",
+	Short:  "Get information about a project by id",
+	Long:   "Get information about a project by id",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			writeStdErrAndExit("[id] is required")
+		}
+		var project hashstack.Project
+		if err := getJSON(fmt.Sprintf("/api/projects/%s", args[0]), &project); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		tbl := uitable.New()
+		tbl.AddRow("NAME", "DESCRIPTION", "UPDATED", "OWNER")
+		tbl.AddRow(project.Name, project.Description, time.Unix(project.UpdatedAt, 0).String(), project.Owner.Username)
+		fmt.Println(tbl)
 	},
 }
 
