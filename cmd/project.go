@@ -1,15 +1,57 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/gosuri/uitable"
+	"github.com/spf13/cobra"
+	hashstack "github.com/stricture/hashstack-server-core-ng"
+)
 
 var projectCmd = &cobra.Command{
 	Use:    "project",
-	Short:  "Returns a list of your projects",
-	Long:   "Returns a list of your projects",
+	Short:  "Subcommands can be used to interact with hashstack projects",
+	Long:   "Subcommands can be used to interact with hashstack projects",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		fmt.Println("try hashstack-cli project -h")
 	},
+}
+
+var listProjectCmd = &cobra.Command{
+	Use:    "list",
+	Short:  "Prints a list of all your projects",
+	Long:   "Prints a list of all your projects",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		var projects []hashstack.Project
+		if err := getRangeJSON("/api/projects", &projects); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		tbl := uitable.New()
+		tbl.AddRow("ID", "NAME", "DESCRIPTION", "UPDATED")
+		for _, p := range projects {
+			tm := time.Unix(p.UpdatedAt, 0)
+			tbl.AddRow(p.ID, p.Name, p.Description, tm.String())
+		}
+		fmt.Println(tbl)
+	},
+}
+
+var getProjectCmd = &cobra.Command{
+	Use:    "get",
+	Short:  "Get information about a project by name",
+	Long:   "Get information about a project by name",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+	},
+}
+
+type newProjectRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 var newProjectCmd = &cobra.Command{
@@ -18,11 +60,30 @@ var newProjectCmd = &cobra.Command{
 	Long:   "Create a new project",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		if len(args) < 2 {
+			writeStdErrAndExit("[project_name] and [description] are required")
+		}
+		req := newProjectRequest{
+			Name:        args[0],
+			Description: args[1],
+		}
+		body, err := postJSON("/api/projects", req)
+		if err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		var project hashstack.Project
+		if err := json.Unmarshal(body, &project); err != nil {
+			writeStdErrAndExit("error decoding JSON from server")
+		}
+		fmt.Println("[+] New project created")
+		fmt.Printf("Name: %s\n", project.Name)
+		fmt.Printf("Description: %s\n", project.Description)
 	},
 }
 
 func init() {
 	projectCmd.AddCommand(newProjectCmd)
+	projectCmd.AddCommand(listProjectCmd)
+	projectCmd.AddCommand(getProjectCmd)
 	RootCmd.AddCommand(projectCmd)
 }
