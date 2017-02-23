@@ -52,6 +52,10 @@ type binaryScrapableItem struct {
 	Filename string `json:"filename"`
 }
 
+var (
+	flIsHexSalt bool
+)
+
 var newListCmd = &cobra.Command{
 	Use:    "new [project_id] [mode] [file]",
 	Short:  "Upload a new hash or hash list to hashstack",
@@ -96,6 +100,11 @@ var newListCmd = &cobra.Command{
 			}
 			form.WriteField("hash_mode", strconv.Itoa(hashMode.HashMode))
 			form.WriteField("name", name)
+			isHexSaltStr := "false"
+			if flIsHexSalt {
+				isHexSaltStr = "true"
+			}
+			form.WriteField("is_hex_salt", isHexSaltStr)
 			form.Close()
 			resp, err = postMultipart(fmt.Sprintf("/api/projects/%s/lists/nonbinary", pid), form.FormDataContentType(), &body)
 			if err != nil {
@@ -175,6 +184,7 @@ var newListCmd = &cobra.Command{
 }
 
 func init() {
+	newListCmd.PersistentFlags().BoolVar(&flIsHexSalt, "hex-salt", false, "Assume is given in hex")
 	listCmd.AddCommand(newListCmd)
 	RootCmd.AddCommand(listCmd)
 }
