@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -124,6 +125,35 @@ func postJSON(path string, data interface{}) ([]byte, error) {
 		return body, errors.New("there was an error creating the request")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("bearer %s", flToken))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return body, errors.New("there was an error completing the request")
+	}
+	switch resp.StatusCode {
+	case 401:
+		return body, errors.New("authentication failed: you may need to run auth again")
+	case 400:
+		return body, errors.New("there were some validation errors for your request")
+	case 404:
+		return body, errors.New("item not found on server")
+	case 500:
+		return body, errors.New("there was an internal server error")
+	}
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return body, errors.New("there was an error reading the response body")
+	}
+	return body, nil
+}
+
+func postMultipart(path, contentType string, reader io.Reader) ([]byte, error) {
+	var body []byte
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", flServerURL, path), reader)
+	if err != nil {
+		return body, errors.New("there was an error creating the request")
+	}
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", fmt.Sprintf("bearer %s", flToken))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
