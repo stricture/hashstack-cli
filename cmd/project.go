@@ -11,12 +11,12 @@ import (
 )
 
 var projectCmd = &cobra.Command{
-	Use:    "project",
+	Use:    "projects",
 	Short:  "Subcommands can be used to interact with hashstack projects",
 	Long:   "Subcommands can be used to interact with hashstack projects",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("try hashstack-cli project -h")
+		fmt.Println("try hashstack-cli projects -h")
 	},
 }
 
