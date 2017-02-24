@@ -114,6 +114,29 @@ var newJobCmd = &cobra.Command{
 				step.RuleID = ruleFile.ID
 			}
 		case 1:
+			if len(args) < 4 {
+				writeStdErrAndExit("two dictionary files are required for a combination attack")
+			}
+			if flRuleLeft != "" {
+				step.RuleBufLeft = flRuleLeft
+			}
+			if flRuleRight != "" {
+				step.RuleBufRight = flRuleRight
+			}
+			var (
+				wordlistFile    hashstack.File
+				combinationFile hashstack.File
+			)
+			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[3]), &wordlistFile); err != nil {
+				debug(err.Error())
+				writeStdErrAndExit("provided dictionary does not exist on the server")
+			}
+			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[4]), &combinationFile); err != nil {
+				debug(err.Error())
+				writeStdErrAndExit("provided combination dictionary does not exist on the server")
+			}
+			step.WordlistID = wordlistFile.ID
+			step.WordlistCombinationID = combinationFile.ID
 
 		case 3:
 			step.Mask = args[3]
@@ -123,9 +146,27 @@ var newJobCmd = &cobra.Command{
 			step.CustomCharset4 = flCustomCharset4
 			step.IsHexCharset = flIsHexCharset
 		case 6:
-
+			if len(args) < 4 {
+				writeStdErrAndExit("a dictionary file and mask are required for this attack mode")
+			}
+			var wordlistFile hashstack.File
+			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[3]), &wordlistFile); err != nil {
+				debug(err.Error())
+				writeStdErrAndExit("provided dictionary does not exist on the server")
+			}
+			step.WordlistID = wordlistFile.ID
+			step.Mask = args[4]
 		case 7:
-
+			if len(args) < 4 {
+				writeStdErrAndExit("a mask and dictionary file are required for this attack mode")
+			}
+			var wordlistFile hashstack.File
+			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[4]), &wordlistFile); err != nil {
+				debug(err.Error())
+				writeStdErrAndExit("provided dictionary does not exist on the server")
+			}
+			step.WordlistID = wordlistFile.ID
+			step.Mask = args[3]
 		default:
 			writeStdErrAndExit("invalid attack-mode")
 		}
