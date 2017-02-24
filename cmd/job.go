@@ -97,7 +97,22 @@ var newJobCmd = &cobra.Command{
 		}
 		switch flAttackMode {
 		case 0:
-
+			var (
+				wordlistFile hashstack.File
+				ruleFile     hashstack.File
+			)
+			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[3]), &wordlistFile); err != nil {
+				debug(err.Error())
+				writeStdErrAndExit("provided dictionary does not exist on the server")
+			}
+			step.WordlistID = wordlistFile.ID
+			if flRulesFile != "" {
+				if err := getJSON(fmt.Sprintf("/api/rules?filename=%s", flRulesFile), &ruleFile); err != nil {
+					debug(err.Error())
+					writeStdErrAndExit("provided rule file does not exist on the server")
+				}
+				step.RuleID = ruleFile.ID
+			}
 		case 1:
 
 		case 3:
