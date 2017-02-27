@@ -84,11 +84,35 @@ func getRangeJSON(path string, data interface{}) error {
 	return nil
 }
 
+func getReader(path string) (io.ReadCloser, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s", flServerURL, path), nil)
+	if err != nil {
+		return nil, errors.New("there was an error creating the request")
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("bearer %s", flToken))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, errors.New("there was an error completing the request")
+	}
+	switch resp.StatusCode {
+	case 401:
+		return nil, errors.New("authentication failed: you may need to run auth again")
+	case 400:
+		return nil, errors.New("there were some validation errors for your request")
+	case 404:
+		return nil, errors.New("item not found on server")
+	case 500:
+		return nil, errors.New("there was an internal server error")
+	}
+	return resp.Body, nil
+}
+
 func getJSON(path string, data interface{}) error {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s", flServerURL, path), nil)
 	if err != nil {
 		return errors.New("there was an error creating the request")
 	}
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("bearer %s", flToken))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -109,6 +133,7 @@ func getJSON(path string, data interface{}) error {
 		return errors.New("there was an error reading the response body")
 	}
 	if err := json.Unmarshal(body, data); err != nil {
+		debug(string(body))
 		return errors.New("there was an error decoding JSON returned from the server")
 	}
 	return nil
@@ -174,4 +199,28 @@ func postMultipart(path, contentType string, reader io.Reader) ([]byte, error) {
 		return body, errors.New("there was an error reading the response body")
 	}
 	return body, nil
+}
+
+func deleteHTTP(path string) error {
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s%s", flServerURL, path), nil)
+	if err != nil {
+		return errors.New("there was an error creating the request")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("bearer %s", flToken))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return errors.New("there was an error completing the request")
+	}
+	switch resp.StatusCode {
+	case 401:
+		return errors.New("authentication failed: you may need to run auth again")
+	case 400:
+		return errors.New("there were some validation errors for your request")
+	case 404:
+		return errors.New("item not found on server")
+	case 500:
+		return errors.New("there was an internal server error")
+	}
+	return nil
 }

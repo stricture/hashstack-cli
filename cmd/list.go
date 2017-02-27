@@ -18,6 +18,7 @@ import (
 
 	"strings"
 
+	"github.com/gosuri/uitable"
 	"github.com/spf13/cobra"
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
@@ -27,9 +28,7 @@ var listCmd = &cobra.Command{
 	Short:  "Subcommands can be used to interact with hashstack lists",
 	Long:   "Subcommands can be used to interact with hashstack lists",
 	PreRun: ensureAuth,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("try hashstack-cli lists -h")
-	},
+	Run:    topUsage,
 }
 
 type binaryRequest struct {
@@ -57,7 +56,7 @@ var (
 )
 
 var newListCmd = &cobra.Command{
-	Use:    "new [project_id] [mode] [file]",
+	Use:    "new <project_id> <mode> <file>",
 	Short:  "Upload a new hash or hash list to hashstack",
 	Long:   "Upload a new hash or hash list to hashstack",
 	PreRun: ensureAuth,
@@ -71,7 +70,7 @@ var newListCmd = &cobra.Command{
 		)
 		projectID, err := strconv.Atoi(pid)
 		if err != nil {
-			writeStdErrAndExit("[project_id] is not valid")
+			writeStdErrAndExit("project_id is not valid")
 		}
 		if err := getJSON(fmt.Sprintf("/api/hash_modes?mode=%s", mode), &hashMode); err != nil {
 			writeStdErrAndExit(err.Error())
@@ -178,13 +177,56 @@ var newListCmd = &cobra.Command{
 			debug(err.Error())
 			writeStdErrAndExit("error decoding json returned form server")
 		}
-		fmt.Printf("JSON LIST\n")
-		fmt.Printf("%+v\n", list)
+		tbl := uitable.New()
+		tbl.AddRow("ID:", list.ID)
+		tbl.AddRow("Mode:", list.HashMode)
+		tbl.AddRow("Digests:", list.DigestCount)
+		fmt.Println(tbl)
+	},
+}
+
+var showListCmd = &cobra.Command{
+	Use:    "show <project_id> <list_id>",
+	Short:  "Display information about a list by id",
+	Long:   "Display information about a list by id",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and list_id is required")
+		}
+		var list hashstack.List
+		if err := getJSON(fmt.Sprintf("/api/projects/%s/lists/%s", args[0], args[1]), &list); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		tbl := uitable.New()
+		tbl.AddRow("ID:", list.ID)
+		tbl.AddRow("Mode:", list.HashMode)
+		tbl.AddRow("Name:", list.Name)
+		tbl.AddRow("Recovered:", fmt.Sprintf("%d/%d (%d%%)", list.RecoveredCount, list.DigestCount, list.RecoveredCount/list.DigestCount))
+		fmt.Println(tbl)
+	},
+}
+
+var plainsListCmd = &cobra.Command{
+	Use:   "plains <project_id> <list_id>",
+	Short: "Download plains for a list",
+	Long:  "Download plains for a list",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and list_id is required")
+		}
+		body, err := getReader(fmt.Sprintf("/api/projects/%s/lists/%s/plains", args[0], args[1]))
+		if err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		io.Copy(os.Stdout, body)
 	},
 }
 
 func init() {
 	newListCmd.PersistentFlags().BoolVar(&flIsHexSalt, "hex-salt", false, "Assume is given in hex")
 	listCmd.AddCommand(newListCmd)
+	listCmd.AddCommand(showListCmd)
+	listCmd.AddCommand(plainsListCmd)
 	RootCmd.AddCommand(listCmd)
 }
