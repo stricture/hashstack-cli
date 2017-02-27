@@ -76,7 +76,8 @@ will be saved in your home directory for all additional requests.
 			fmt.Println(tomlString)
 		}
 		filename := filepath.Join(usr.HomeDir, "hashstack-cli.toml")
-		fh, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0655)
+		os.Remove(filename)
+		fh, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0655)
 		if err != nil {
 			writeStdErrAndExit("error opening file")
 		}
