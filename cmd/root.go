@@ -13,6 +13,10 @@ var authedSubCommands = []string{
 	"project",
 }
 
+func topUsage(cmd *cobra.Command, args []string) {
+	cmd.Usage()
+}
+
 // RootCmd is the root level command for the cli.
 var RootCmd = &cobra.Command{
 	Use:   "hashstack-cli",
