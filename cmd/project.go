@@ -83,7 +83,20 @@ var getProjectCmd = &cobra.Command{
 			percent := l.RecoveredCount / l.DigestCount
 			tbl3.AddRow(l.ID, l.HashMode, l.Name, fmt.Sprintf("%d/%d (%d%%)", l.RecoveredCount, l.DigestCount, percent))
 		}
+		tbl3.AddRow("")
 		fmt.Println(tbl3)
+
+		tbl4 := uitable.New()
+		fmt.Println("Jobs:")
+		tbl4.AddRow("ID", "NAME", "IS_ACTIVE", "LIST_ID", "MAX_DEVICES", "PRIORITY")
+		var jobs []hashstack.Job
+		if err := getRangeJSON(fmt.Sprintf("/api/projects/%s/jobs", args[0]), &jobs); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		for _, j := range jobs {
+			tbl4.AddRow(j.ID, j.Name, j.IsActive, j.ListID, j.MaxDedicatedDevices, j.Priority)
+		}
+		fmt.Println(tbl4)
 	},
 }
 

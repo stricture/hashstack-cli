@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	flHashMode            int
 	flAttackMode          int
 	flIsHexCharset        bool
 	flMarkovHcstat        string
@@ -27,6 +26,7 @@ var (
 	flCustomCharset3      string
 	flCustomCharset4      string
 )
+
 var jobCmd = &cobra.Command{
 	Use:    "jobs",
 	Short:  "Subcommands can be used to interact with hashstack jobs",
@@ -34,6 +34,93 @@ var jobCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("try hashstack-cli lists -h")
+	},
+}
+
+type updateRequest struct {
+	Priority            int  `json:"priority"`
+	MaxDedicatedDevices int  `json:"max_dedicated_devices"`
+	IsActive            bool `json:"is_active"`
+}
+
+var pauseJobCmd = &cobra.Command{
+	Use:    "pause <project_id> <job_id>",
+	Short:  "Pauses a job by setting \"is_active\" to false",
+	Long:   "Pauses a job by setting \"is_active\" to false",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and job_id are required")
+		}
+		var job hashstack.Job
+		path := fmt.Sprintf("/api/projects/%s/jobs/%s", args[0], args[1])
+		if err := getJSON(path, &job); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		update := updateRequest{
+			Priority:            job.Priority,
+			MaxDedicatedDevices: job.MaxDedicatedDevices,
+			IsActive:            false,
+		}
+		if _, err := patchJSON(path, &update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("[+] Job paused")
+	},
+}
+
+var delJobCmd = &cobra.Command{
+	Use:    "del <project_id> <job_id>",
+	Short:  "Deletes a job by id",
+	Long:   "Deletes a job by id",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and job_id are required")
+		}
+
+		path := fmt.Sprintf("/api/projects/%s/jobs/%s", args[0], args[1])
+		var job hashstack.Job
+		if err := getJSON(path, &job); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		var attack hashstack.Attack
+		if err := getJSON(fmt.Sprintf("/api/attacks/%d", job.AttackID), &attack); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
+			deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
+		}
+		if err := deleteHTTP(path); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("[+] Job deleted")
+	},
+}
+
+var startJobCmd = &cobra.Command{
+	Use:    "start <project_id> <job_id>",
+	Short:  "Starts a job by setting \"is_active\" to true",
+	Long:   "Starts a job by setting \"is_active\" to true",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and job_id are required")
+		}
+		var job hashstack.Job
+		path := fmt.Sprintf("/api/projects/%s/jobs/%s", args[0], args[1])
+		if err := getJSON(path, &job); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		update := updateRequest{
+			Priority:            job.Priority,
+			MaxDedicatedDevices: job.MaxDedicatedDevices,
+			IsActive:            true,
+		}
+		if _, err := patchJSON(path, &update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("[+] Job started")
 	},
 }
 
@@ -202,7 +289,6 @@ var newJobCmd = &cobra.Command{
 }
 
 func init() {
-	newJobCmd.PersistentFlags().IntVarP(&flHashMode, "hash-type", "m", 0, "Hash-type, see hashstack-cli modes for references")
 	newJobCmd.PersistentFlags().IntVarP(&flAttackMode, "attack-mode", "a", 0, "Attack-mode, see references below")
 	newJobCmd.PersistentFlags().BoolVar(&flIsHexCharset, "hex-charset", false, "Assume charset is given in hex")
 	newJobCmd.PersistentFlags().StringVar(&flMarkovHcstat, "markov-hcstat", "", "Specify hcstat file to use")
@@ -218,5 +304,8 @@ func init() {
 	newJobCmd.PersistentFlags().StringVarP(&flCustomCharset3, "custom-charset3", "3", "", "User-defined charset ?3")
 	newJobCmd.PersistentFlags().StringVarP(&flCustomCharset4, "custom-charset4", "4", "", "User-defined charset ?4")
 	jobCmd.AddCommand(newJobCmd)
+	jobCmd.AddCommand(pauseJobCmd)
+	jobCmd.AddCommand(startJobCmd)
+	jobCmd.AddCommand(delJobCmd)
 	RootCmd.AddCommand(jobCmd)
 }
