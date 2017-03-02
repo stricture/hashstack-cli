@@ -29,7 +29,7 @@ func getListCount(projectID int64) (int, error) {
 	path := fmt.Sprintf("/api/projects/%d/lists", projectID)
 	return getTotal(path)
 }
-no
+
 func getJobs(projectID int64) ([]hashstack.Job, error) {
 	path := fmt.Sprintf("/api/projects/%d/jobs", projectID)
 	var jobs []hashstack.Job
