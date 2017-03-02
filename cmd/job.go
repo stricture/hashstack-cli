@@ -3,9 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-
+	"io"
+	"os"
 	"strconv"
+	"time"
 
+	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
@@ -27,13 +30,69 @@ var (
 	flCustomCharset4      string
 )
 
+func displayJob(w io.Writer, job hashstack.Job) {
+	status := "Running"
+	if job.IsExhausted {
+		status = "Complete"
+	}
+	if !job.IsActive && !job.IsExhausted {
+		status = "Paused"
+	}
+	list := hashstack.List{
+		ProjectID: job.ProjectID,
+		ID:        job.ListID,
+	}
+	getListByID(&list)
+	mode := getMode(list.HashMode)
+	liststat := fmt.Sprintf("%d/%d (%d%%)", list.RecoveredCount, list.DigestCount, list.RecoveredCount/list.DigestCount)
+
+	fmt.Fprintf(w, "Job.............: %s\n", job.Name)
+	fmt.Fprintf(w, "ID..............: %d\n", job.ID)
+	fmt.Fprintf(w, "Status..........: %s\n", status)
+	fmt.Fprintf(w, "Hash.Type.......: %d (%s)\n", mode.HashMode, mode.Algorithm)
+	fmt.Fprintf(w, "Hash.Target.....: %s\n", list.Name)
+	fmt.Fprintf(w, "Max Devices.....: %d\n", job.MaxDedicatedDevices)
+	fmt.Fprintf(w, "Priority........: %d\n", job.Priority)
+	fmt.Fprintf(w, "Time.Created....: %s\n", humanize.Time(time.Unix(job.CreatedAt, 0)))
+	fmt.Fprintf(w, "Time.Started....: %s\n", humanize.Time(time.Unix(job.FirstTaskTime, 0)))
+	fmt.Fprintf(w, "Recovered.......: %s\n", liststat)
+	// TODO SPEED and TASKS
+}
+
+func getJob(projectID, jobID int64) hashstack.Job {
+	var job hashstack.Job
+	path := fmt.Sprintf("/api/projects/%d/jobs/%d", projectID, jobID)
+	if err := getJSON(path, &job); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	return job
+}
+
+func statsJob(job hashstack.Job) {
+	c := time.Tick(5 * time.Second)
+	for range c {
+		job = getJob(job.ProjectID, job.ID)
+		displayJob(os.Stdout, job)
+	}
+}
+
 var jobCmd = &cobra.Command{
-	Use:    "jobs",
-	Short:  "Subcommands can be used to interact with hashstack jobs",
-	Long:   "Subcommands can be used to interact with hashstack jobs",
+	Use:    "jobs <project_name|project_id> <job_id>",
+	Short:  "Attach to a projects job by project_name|project_id and job_id (-h or --help for subcommands",
+	Long:   "Attach to a projects job by project_name|project_id and job_id (-h or --help for subcommands",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("try hashstack-cli lists -h")
+		if len(args) < 1 {
+			cmd.Usage()
+			return
+		}
+
+		i, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
+		}
+		project := getProject(args[0])
+		statsJob(getJob(project.ID, int64(i)))
 	},
 }
 
@@ -44,46 +103,48 @@ type updateRequest struct {
 }
 
 var pauseJobCmd = &cobra.Command{
-	Use:    "pause <project_id> <job_id>",
-	Short:  "Pauses a job by setting \"is_active\" to false",
-	Long:   "Pauses a job by setting \"is_active\" to false",
+	Use:    "pause <project_name|project_id> <job_id>",
+	Short:  "Pauses a job by project_name|project_id and job_id",
+	Long:   "Pauses a job by project_name|project_id and job_id",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_id and job_id are required")
+			writeStdErrAndExit("project_name|project_id and job_id are required")
 		}
-		var job hashstack.Job
-		path := fmt.Sprintf("/api/projects/%s/jobs/%s", args[0], args[1])
-		if err := getJSON(path, &job); err != nil {
-			writeStdErrAndExit(err.Error())
+		project := getProject(args[0])
+		i, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
 		}
+		job := getJob(project.ID, int64(i))
 		update := updateRequest{
 			Priority:            job.Priority,
 			MaxDedicatedDevices: job.MaxDedicatedDevices,
 			IsActive:            false,
 		}
+		path := fmt.Sprintf("/api/projects/%d/jobs/%d", project.ID, job.ID)
 		if _, err := patchJSON(path, &update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("[+] Job paused")
+		fmt.Println("job has been paused")
 	},
 }
 
 var delJobCmd = &cobra.Command{
-	Use:    "del <project_id> <job_id>",
-	Short:  "Deletes a job by id",
-	Long:   "Deletes a job by id",
+	Use:    "delete <project_name|project_id> <job_id>",
+	Short:  "Deletes a job by project_name|project_id and job_id",
+	Long:   "Deletes a job by project_name|project_id and job_id",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_id and job_id are required")
+			writeStdErrAndExit("project_name|project_id and job_id are required")
 		}
-
-		path := fmt.Sprintf("/api/projects/%s/jobs/%s", args[0], args[1])
-		var job hashstack.Job
-		if err := getJSON(path, &job); err != nil {
-			writeStdErrAndExit(err.Error())
+		project := getProject(args[0])
+		i, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
 		}
+		job := getJob(project.ID, int64(i))
 		var attack hashstack.Attack
 		if err := getJSON(fmt.Sprintf("/api/attacks/%d", job.AttackID), &attack); err != nil {
 			writeStdErrAndExit(err.Error())
@@ -91,36 +152,39 @@ var delJobCmd = &cobra.Command{
 		if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
 			deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
 		}
+		path := fmt.Sprintf("/api/projects/%d/jobs/%d", project.ID, job.ID)
 		if err := deleteHTTP(path); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("[+] Job deleted")
+		fmt.Println("job was successfully deleted")
 	},
 }
 
 var startJobCmd = &cobra.Command{
-	Use:    "start <project_id> <job_id>",
-	Short:  "Starts a job by setting \"is_active\" to true",
-	Long:   "Starts a job by setting \"is_active\" to true",
+	Use:    "start <project_name|project_id> <job_id>",
+	Short:  "Starts a job by project_name|project_id and job_id",
+	Long:   "Starts a job by project_name|project_id and job_id",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_id and job_id are required")
+			writeStdErrAndExit("project_name|project_id and job_id are required")
 		}
-		var job hashstack.Job
-		path := fmt.Sprintf("/api/projects/%s/jobs/%s", args[0], args[1])
-		if err := getJSON(path, &job); err != nil {
-			writeStdErrAndExit(err.Error())
+		project := getProject(args[0])
+		i, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
 		}
+		job := getJob(project.ID, int64(i))
 		update := updateRequest{
 			Priority:            job.Priority,
 			MaxDedicatedDevices: job.MaxDedicatedDevices,
 			IsActive:            true,
 		}
+		path := fmt.Sprintf("/api/projects/%d/jobs/%d", project.ID, job.ID)
 		if _, err := patchJSON(path, &update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("[+] Job started")
+		fmt.Println("job has been started")
 	},
 }
 
@@ -156,28 +220,21 @@ type attackRequest struct {
 	Steps []attackStep `json:"steps"`
 }
 
-var newJobCmd = &cobra.Command{
-	Use:    "new <project_id> <list_id> <name> <dictionary|mask>",
-	Short:  "Create a new job for the provided project and list",
-	Long:   "Create a new job for the provided project and list",
+var addJobCmd = &cobra.Command{
+	Use:    "add <project_name|project_id> <list_name|list_id> <name> <dictionary|mask>",
+	Short:  "Add a job for the provided project and list",
+	Long:   "Add a job for the provided project and list",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 4 {
 			writeStdErrAndExit("missing required arugment")
 		}
 		var (
-			projectIDStr = args[0]
-			listIDStr    = args[1]
-			name         = args[2]
+			name = args[2]
 		)
-		projectID, err := strconv.Atoi(projectIDStr)
-		if err != nil {
-			writeStdErrAndExit("invalid project_id")
-		}
-		listID, err := strconv.Atoi(listIDStr)
-		if err != nil {
-			writeStdErrAndExit("invalid list_id")
-		}
+		project := getProject(args[0])
+		list := getList(project.ID, args[1])
+
 		step := attackStep{
 			IDX:        0,
 			AttackMode: flAttackMode,
@@ -258,7 +315,7 @@ var newJobCmd = &cobra.Command{
 			writeStdErrAndExit("invalid attack-mode")
 		}
 		attack := attackRequest{
-			Title: fmt.Sprintf("hashstack-cli-%d-%d-%s", projectID, listID, name),
+			Title: fmt.Sprintf("hashstack-cli-%d-%d-%s", project.ID, list.ID, name),
 			Steps: []attackStep{step},
 		}
 		data, err := postJSON("/api/attacks", &attack)
@@ -272,38 +329,42 @@ var newJobCmd = &cobra.Command{
 			writeStdErrAndExit("there was an error decoding a response from the server")
 		}
 
-		job := jobRequest{
+		jobreq := jobRequest{
 			Name:                name,
-			ListID:              int64(listID),
+			ListID:              list.ID,
 			AttackID:            plan.ID,
 			Priority:            flPriority,
 			MaxDedicatedDevices: flMaxDedicatedDevices,
 			OpenCLVectorWidth:   flOpenCLVectorWidth,
 		}
-		data, err = postJSON(fmt.Sprintf("/api/projects/%s/jobs", projectIDStr), &job)
+		data, err = postJSON(fmt.Sprintf("/api/projects/%d/jobs", project.ID), &jobreq)
 		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println(string(data))
+		var job hashstack.Job
+		if err := json.Unmarshal(data, &job); err != nil {
+			writeStdErrAndExit("There was an error decoding the response from the server.")
+		}
+		statsJob(job)
 	},
 }
 
 func init() {
-	newJobCmd.PersistentFlags().IntVarP(&flAttackMode, "attack-mode", "a", 0, "Attack-mode, see references below")
-	newJobCmd.PersistentFlags().BoolVar(&flIsHexCharset, "hex-charset", false, "Assume charset is given in hex")
-	newJobCmd.PersistentFlags().StringVar(&flMarkovHcstat, "markov-hcstat", "", "Specify hcstat file to use")
-	newJobCmd.PersistentFlags().IntVarP(&flMarkovThreshold, "markov-threshold", "t", 0, "Threshold X when to stop accepting new markov-chains")
-	newJobCmd.PersistentFlags().IntVar(&flOpenCLVectorWidth, "opencl-vector-width", 0, "Manual override OpenCL  vector-width to X")
-	newJobCmd.PersistentFlags().IntVar(&flPriority, "priority", 1, "The priority for this job 1-100")
-	newJobCmd.PersistentFlags().IntVar(&flMaxDedicatedDevices, "max-devices", 0, "Maximum devices across the entire cluster to use, 0 is unlimited")
-	newJobCmd.PersistentFlags().StringVarP(&flRuleLeft, "rule-left", "j", "", "Single rule applied to each word from left wordlist")
-	newJobCmd.PersistentFlags().StringVarP(&flRuleRight, "rule-right", "k", "", "Single rule applied to each word from left wordlist")
-	newJobCmd.PersistentFlags().StringVarP(&flRulesFile, "rules-file", "r", "", "Rule file to be applied to each word from wordlists")
-	newJobCmd.PersistentFlags().StringVarP(&flCustomCharset1, "custom-charset1", "1", "", "User-defined charset ?1")
-	newJobCmd.PersistentFlags().StringVarP(&flCustomCharset2, "custom-charset2", "2", "", "User-defined charset ?2")
-	newJobCmd.PersistentFlags().StringVarP(&flCustomCharset3, "custom-charset3", "3", "", "User-defined charset ?3")
-	newJobCmd.PersistentFlags().StringVarP(&flCustomCharset4, "custom-charset4", "4", "", "User-defined charset ?4")
-	jobCmd.AddCommand(newJobCmd)
+	addJobCmd.PersistentFlags().IntVarP(&flAttackMode, "attack-mode", "a", 0, "Attack-mode, see references below")
+	addJobCmd.PersistentFlags().BoolVar(&flIsHexCharset, "hex-charset", false, "Assume charset is given in hex")
+	addJobCmd.PersistentFlags().StringVar(&flMarkovHcstat, "markov-hcstat", "", "Specify hcstat file to use")
+	addJobCmd.PersistentFlags().IntVarP(&flMarkovThreshold, "markov-threshold", "t", 0, "Threshold X when to stop accepting new markov-chains")
+	addJobCmd.PersistentFlags().IntVar(&flOpenCLVectorWidth, "opencl-vector-width", 0, "Manual override OpenCL  vector-width to X")
+	addJobCmd.PersistentFlags().IntVar(&flPriority, "priority", 1, "The priority for this job 1-100")
+	addJobCmd.PersistentFlags().IntVar(&flMaxDedicatedDevices, "max-devices", 0, "Maximum devices across the entire cluster to use, 0 is unlimited")
+	addJobCmd.PersistentFlags().StringVarP(&flRuleLeft, "rule-left", "j", "", "Single rule applied to each word from left wordlist")
+	addJobCmd.PersistentFlags().StringVarP(&flRuleRight, "rule-right", "k", "", "Single rule applied to each word from left wordlist")
+	addJobCmd.PersistentFlags().StringVarP(&flRulesFile, "rules-file", "r", "", "Rule file to be applied to each word from wordlists")
+	addJobCmd.PersistentFlags().StringVarP(&flCustomCharset1, "custom-charset1", "1", "", "User-defined charset ?1")
+	addJobCmd.PersistentFlags().StringVarP(&flCustomCharset2, "custom-charset2", "2", "", "User-defined charset ?2")
+	addJobCmd.PersistentFlags().StringVarP(&flCustomCharset3, "custom-charset3", "3", "", "User-defined charset ?3")
+	addJobCmd.PersistentFlags().StringVarP(&flCustomCharset4, "custom-charset4", "4", "", "User-defined charset ?4")
+	jobCmd.AddCommand(addJobCmd)
 	jobCmd.AddCommand(pauseJobCmd)
 	jobCmd.AddCommand(startJobCmd)
 	jobCmd.AddCommand(delJobCmd)

@@ -1,34 +1,100 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"os"
-	"strconv"
-
-	"io"
-
 	"path/filepath"
-
-	"bufio"
-
+	"strconv"
 	"strings"
 
-	"github.com/gosuri/uitable"
+	"github.com/cheggaaa/pb"
 	"github.com/spf13/cobra"
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
 
+func getListByID(list *hashstack.List) {
+	path := fmt.Sprintf("/api/projects/%d/lists/%d", list.ProjectID, list.ID)
+	if err := getJSON(path, list); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+}
+func getListByName(list *hashstack.List) {
+	path := fmt.Sprintf("/api/projects/%d/lists?name=%s", list.ProjectID, list.Name)
+	if err := getJSON(path, list); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+}
+func getList(projectID int64, arg string) hashstack.List {
+	list := hashstack.List{
+		ProjectID: projectID,
+	}
+	i, err := strconv.Atoi(arg)
+	if err != nil {
+		list.Name = arg
+		getListByName(&list)
+	} else {
+		list.ID = int64(i)
+		getListByID(&list)
+	}
+	return list
+}
+
+func displayList(list hashstack.List) {
+	liststat := fmt.Sprintf("%d/%d (%d%%)", list.RecoveredCount, list.DigestCount, list.RecoveredCount/list.DigestCount)
+	fmt.Printf("ID..............: %d\n", list.ID)
+	fmt.Printf("Name............: %s\n", list.Name)
+	fmt.Printf("Hash Mode.......: %d\n", list.HashMode)
+	fmt.Printf("Recoverd........: %s\n", liststat)
+	fmt.Println()
+}
+
+func displayLists(arg string) {
+	project := getProject(arg)
+	count, err := getListCount(project.ID)
+	if err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	if count < 1 {
+		writeStdErrAndExit("You have not created any lists for this project")
+	}
+	path := fmt.Sprintf("/api/projects/%d/lists", project.ID)
+	var lists []hashstack.List
+	if err := getRangeJSON(path, &lists); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	for _, l := range lists {
+		displayList(l)
+	}
+}
+
 var listCmd = &cobra.Command{
-	Use:    "lists",
-	Short:  "Subcommands can be used to interact with hashstack lists",
-	Long:   "Subcommands can be used to interact with hashstack lists",
+	Use:   "lists <project_name|project_id> [list_name|list_id]",
+	Short: "Displays a list of all lists associated with the provided project (-h or --help for subcommands)",
+	Long: `
+Displays a list of all lists associated with the provided project. If list_name|list_id is provied, details will be displayed for 
+that specific list. Additional subcommands are available.
+`,
 	PreRun: ensureAuth,
-	Run:    topUsage,
+	Run: func(cmd *cobra.Command, args []string) {
+		switch len(args) {
+		case 0:
+			writeStdErrAndExit("project_name or project_id required. -h --help for subcommands.")
+		case 1:
+			displayLists(args[0])
+		case 2:
+			project := getProject(args[0])
+			displayList(getList(project.ID, args[1]))
+		default:
+			cmd.Usage()
+		}
+	},
 }
 
 type binaryRequest struct {
@@ -55,167 +121,187 @@ var (
 	flIsHexSalt bool
 )
 
-var newListCmd = &cobra.Command{
-	Use:    "new <project_id> <mode> <file>",
-	Short:  "Upload a new hash or hash list to hashstack",
-	Long:   "Upload a new hash or hash list to hashstack",
-	PreRun: ensureAuth,
-	Run: func(cmd *cobra.Command, args []string) {
-		var (
-			pid      = args[0]
-			mode     = args[1]
-			filename = args[2]
-			hashMode hashstack.HashMode
-			resp     []byte
-		)
-		projectID, err := strconv.Atoi(pid)
+func uploadList(pid int64, mode int, filename string) {
+	var (
+		hashMode hashstack.HashMode
+		resp     []byte
+	)
+	if err := getJSON(fmt.Sprintf("/api/hash_modes?mode=%d", mode), &hashMode); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	if !hashMode.IsSupported {
+		writeStdErrAndExit("the selected mode is not supported by the server")
+	}
+	if !hashMode.IsBinary && !hashMode.IsScrapable {
+		file, err := os.Open(filename)
 		if err != nil {
-			writeStdErrAndExit("project_id is not valid")
+			debug(err.Error())
+			writeStdErrAndExit("there was an error opening the provided file")
 		}
-		if err := getJSON(fmt.Sprintf("/api/hash_modes?mode=%s", mode), &hashMode); err != nil {
+		defer file.Close()
+		var body bytes.Buffer
+		form := multipart.NewWriter(&body)
+		_, name := filepath.Split(file.Name())
+		part, err := form.CreateFormFile("file", file.Name())
+		if err != nil {
+			debug(err.Error())
+			writeStdErrAndExit("there was an error generating the request")
+		}
+		if _, err := io.Copy(part, file); err != nil {
+			debug(err.Error())
+			writeStdErrAndExit("there was an error reading the provided file")
+		}
+		form.WriteField("hash_mode", strconv.Itoa(hashMode.HashMode))
+		form.WriteField("name", name)
+		isHexSaltStr := "false"
+		if flIsHexSalt {
+			isHexSaltStr = "true"
+		}
+		form.WriteField("is_hex_salt", isHexSaltStr)
+		form.Close()
+		// Proxy request through progress bar.
+		bar := pb.New(body.Len()).SetUnits(pb.U_BYTES)
+		bar.Start()
+		proxy := bar.NewProxyReader(&body)
+		resp, err = postMultipart(fmt.Sprintf("/api/projects/%d/lists/nonbinary", pid), form.FormDataContentType(), proxy)
+		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		if !hashMode.IsSupported {
-			writeStdErrAndExit("the selected mode is not supported by the server")
-		}
-		if !hashMode.IsBinary && !hashMode.IsScrapable {
-			file, err := os.Open(filename)
-			if err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("there was an error opening the provided file")
-			}
-			defer file.Close()
-			var body bytes.Buffer
-			form := multipart.NewWriter(&body)
-			_, name := filepath.Split(file.Name())
-			part, err := form.CreateFormFile("file", file.Name())
-			if err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("there was an error generating the request")
-			}
-			if _, err := io.Copy(part, file); err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("there was an error reading the provided file")
-			}
-			form.WriteField("hash_mode", strconv.Itoa(hashMode.HashMode))
-			form.WriteField("name", name)
-			isHexSaltStr := "false"
-			if flIsHexSalt {
-				isHexSaltStr = "true"
-			}
-			form.WriteField("is_hex_salt", isHexSaltStr)
-			form.Close()
-			resp, err = postMultipart(fmt.Sprintf("/api/projects/%s/lists/nonbinary", pid), form.FormDataContentType(), &body)
-			if err != nil {
-				writeStdErrAndExit(err.Error())
-			}
-
-		}
-		if hashMode.IsBinary && hashMode.IsScrapable {
-			_, name := filepath.Split(filename)
-			file, err := os.Open(filename)
-			if err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("there was an error opening the provided file")
-			}
-			defer file.Close()
-			var hashes []binaryScrapableItem
-			scanner := bufio.NewScanner(file)
-			for scanner.Scan() {
-				line := scanner.Text()
-				if line == "" {
-					continue
-				}
-				parts := strings.SplitN(line, ":", 2)
-				if len(parts) != 2 {
-					// TODO: Should we warn here?
-					continue
-				}
-				hashes = append(hashes, binaryScrapableItem{
-					Filename: parts[0],
-					Hash:     parts[1],
-				})
-			}
-			if err := scanner.Err(); err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("there was an error reading the file")
-			}
-			req := binaryScrapableRequest{
-				ProjectID: int64(projectID),
-				HashMode:  hashMode.HashMode,
-				Hashes:    hashes,
-				Name:      name,
-			}
-			resp, err = postJSON(fmt.Sprintf("/api/projects/%s/lists/binaryscrapable", pid), req)
-			if err != nil {
-				writeStdErrAndExit(err.Error())
-			}
-		}
-
-		if hashMode.IsBinary {
-			data, err := ioutil.ReadFile(filename)
-			if err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("there was an error reading the provided file")
-			}
-			_, name := filepath.Split(filename)
-			req := binaryRequest{
-				ProjectID:   int64(projectID),
-				HashMode:    hashMode.HashMode,
-				EncodedHash: base64.StdEncoding.EncodeToString(data),
-				Filename:    name,
-				Name:        name,
-			}
-			resp, err = postJSON(fmt.Sprintf("/api/projects/%s/lists/binary", pid), req)
-			if err != nil {
-				writeStdErrAndExit(err.Error())
-			}
-		}
-
-		var list hashstack.List
-		if err := json.Unmarshal(resp, &list); err != nil {
+		bar.Finish()
+		fmt.Println("")
+	}
+	if hashMode.IsBinary && hashMode.IsScrapable {
+		_, name := filepath.Split(filename)
+		file, err := os.Open(filename)
+		if err != nil {
 			debug(err.Error())
-			writeStdErrAndExit("error decoding json returned form server")
+			writeStdErrAndExit("there was an error opening the provided file")
 		}
-		tbl := uitable.New()
-		tbl.AddRow("ID:", list.ID)
-		tbl.AddRow("Mode:", list.HashMode)
-		tbl.AddRow("Digests:", list.DigestCount)
-		fmt.Println(tbl)
+		defer file.Close()
+		var hashes []binaryScrapableItem
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "" {
+				continue
+			}
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) != 2 {
+				// TODO: Should we warn here?
+				continue
+			}
+			hashes = append(hashes, binaryScrapableItem{
+				Filename: parts[0],
+				Hash:     parts[1],
+			})
+		}
+		if err := scanner.Err(); err != nil {
+			debug(err.Error())
+			writeStdErrAndExit("there was an error reading the file")
+		}
+		req := binaryScrapableRequest{
+			ProjectID: pid,
+			HashMode:  hashMode.HashMode,
+			Hashes:    hashes,
+			Name:      name,
+		}
+		resp, err = postJSON(fmt.Sprintf("/api/projects/%d/lists/binaryscrapable", pid), req)
+		if err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+	}
+
+	if hashMode.IsBinary {
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			debug(err.Error())
+			writeStdErrAndExit("there was an error reading the provided file")
+		}
+		_, name := filepath.Split(filename)
+		req := binaryRequest{
+			ProjectID:   pid,
+			HashMode:    hashMode.HashMode,
+			EncodedHash: base64.StdEncoding.EncodeToString(data),
+			Filename:    name,
+			Name:        name,
+		}
+		resp, err = postJSON(fmt.Sprintf("/api/projects/%d/lists/binary", pid), req)
+		if err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+	}
+
+	var list hashstack.List
+	if err := json.Unmarshal(resp, &list); err != nil {
+		debug(err.Error())
+		writeStdErrAndExit("error decoding json returned form server")
+	}
+	displayList(list)
+}
+
+var addListCmd = &cobra.Command{
+	Use:   "add <project_name|project_id> <mode> <file>",
+	Short: "Add a new list to a project",
+	Long: `
+Add a new file containing one or more hashes to a project by project_name or project_id. Modes can be viewed
+using the "modes" subcommand. The file name must be unique across projects.	
+`,
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 3 {
+			writeStdErrAndExit("project_name|project_id, mode, and file are required")
+		}
+		var (
+			pidStr   = args[0]
+			modeStr  = args[1]
+			filename = args[2]
+		)
+		mode, err := strconv.Atoi(modeStr)
+		if err != nil {
+			writeStdErrAndExit("mode is invalid")
+		}
+		project := getProject(pidStr)
+		uploadList(project.ID, mode, filename)
 	},
 }
 
-var showListCmd = &cobra.Command{
-	Use:    "show <project_id> <list_id>",
-	Short:  "Display information about a list by id",
-	Long:   "Display information about a list by id",
+func deleteList(projectID int64, listID int64) {
+	path := fmt.Sprintf("/api/projects/%d/lists/%d", projectID, listID)
+	if err := deleteHTTP(path); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	fmt.Println("list deleted successfully")
+}
+
+var delListCmd = &cobra.Command{
+	Use:   "delete <project_name|project_id> <list_name|list_id>",
+	Short: "Delete a list from a project",
+	Long: `
+Delete a list from a project by project_name or project_id. Deleting a list also deletes
+the associated plains.
+`,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_id and list_id is required")
+			writeStdErrAndExit("project_name|project_id and list_name|list_id are required")
 		}
-		var list hashstack.List
-		if err := getJSON(fmt.Sprintf("/api/projects/%s/lists/%s", args[0], args[1]), &list); err != nil {
-			writeStdErrAndExit(err.Error())
-		}
-		tbl := uitable.New()
-		tbl.AddRow("ID:", list.ID)
-		tbl.AddRow("Mode:", list.HashMode)
-		tbl.AddRow("Name:", list.Name)
-		tbl.AddRow("Recovered:", fmt.Sprintf("%d/%d (%d%%)", list.RecoveredCount, list.DigestCount, list.RecoveredCount/list.DigestCount))
-		fmt.Println(tbl)
+		project := getProject(args[0])
+		list := getList(project.ID, args[1])
+		deleteList(project.ID, list.ID)
 	},
 }
 
 var plainsListCmd = &cobra.Command{
-	Use:   "plains <project_id> <list_id>",
+	Use:   "plains <project_name|project_id> <list_name|list_id>",
 	Short: "Download plains for a list",
 	Long:  "Download plains for a list",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_id and list_id is required")
+			writeStdErrAndExit("project_name|project_id and list_id is required")
 		}
-		body, err := getReader(fmt.Sprintf("/api/projects/%s/lists/%s/plains", args[0], args[1]))
+		project := getProject(args[0])
+		list := getList(project.ID, args[1])
+		body, err := getReader(fmt.Sprintf("/api/projects/%d/lists/%d/plains", project.ID, list.ID))
 		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
@@ -224,9 +310,9 @@ var plainsListCmd = &cobra.Command{
 }
 
 func init() {
-	newListCmd.PersistentFlags().BoolVar(&flIsHexSalt, "hex-salt", false, "Assume is given in hex")
-	listCmd.AddCommand(newListCmd)
-	listCmd.AddCommand(showListCmd)
+	addListCmd.PersistentFlags().BoolVar(&flIsHexSalt, "hex-salt", false, "Assume is given in hex")
+	listCmd.AddCommand(addListCmd)
+	listCmd.AddCommand(delListCmd)
 	listCmd.AddCommand(plainsListCmd)
 	RootCmd.AddCommand(listCmd)
 }

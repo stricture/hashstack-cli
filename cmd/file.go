@@ -1,60 +1,56 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
-	"sort"
+	"io"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"time"
 
-	"github.com/gosuri/uitable"
-	"github.com/spf13/cobra"
+	"github.com/cheggaaa/pb"
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
 
-var fileCmd = &cobra.Command{
-	Use:    "files",
-	Short:  "Subcommands can be used to interact with hashstack files",
-	Long:   "Subcommands can be used to interact with hashstack files",
-	PreRun: ensureAuth,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("try hashstack-cli files -h")
-	},
-}
+func uploadFile(path, filename string) {
+	file, err := os.Open(filename)
+	if err != nil {
+		debug(err.Error())
+		writeStdErrAndExit("there was an error opening the provided file")
+	}
+	name := filepath.Base(file.Name())
+	defer file.Close()
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreateFormFile("file", name)
+	if err != nil {
+		debug(err.Error())
+		writeStdErrAndExit("there was an error generating the request")
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		debug(err.Error())
+		writeStdErrAndExit("there was an error reading the provided file")
+	}
+	form.Close()
 
-var listFileCmd = &cobra.Command{
-	Use:    "list <type>",
-	Short:  "Prints a list of files on the remote server",
-	Long:   "Prints a list of files on the remote server",
-	PreRun: ensureAuth,
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 1 {
-			writeStdErrAndExit("<type> is required")
-		}
-		var files []hashstack.File
-		switch args[0] {
-		case "wordlists":
-			if err := getRangeJSON("/api/wordlists", &files); err != nil {
-				writeStdErrAndExit(err.Error())
-			}
-		case "rules":
-			if err := getRangeJSON("/api/rules", &files); err != nil {
-				writeStdErrAndExit(err.Error())
-			}
-		default:
-			writeStdErrAndExit("<type> is not valid")
-		}
-		sort.Slice(files, func(i, j int) bool {
-			return files[i].Filename < files[j].Filename
-		})
-		tbl := uitable.New()
-		tbl.AddRow("FILENAME", "LINES", "MTIME")
-		for _, file := range files {
-			tbl.AddRow(file.Filename, file.Lines, time.Unix(file.Mtime, 0).String())
-		}
-		fmt.Println(tbl)
-	},
-}
-
-func init() {
-	fileCmd.AddCommand(listFileCmd)
-	RootCmd.AddCommand(fileCmd)
+	// Proxy request through progress bar.
+	bar := pb.New(body.Len()).SetUnits(pb.U_BYTES)
+	bar.Start()
+	proxy := bar.NewProxyReader(&body)
+	if _, err = postMultipart(path, form.FormDataContentType(), proxy); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	bar.Finish()
+	fmt.Println("")
+	time.Sleep(5 * time.Second)
+	f := hashstack.File{Filename: name}
+	switch path {
+	case "/api/wordlists":
+		displayWordlist(f)
+	case "/api/rules":
+		displayRule(f)
+	case "/api/hcstat":
+		displayHCStat(f)
+	}
 }

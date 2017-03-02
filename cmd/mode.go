@@ -10,6 +10,15 @@ import (
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
 
+func getMode(mode int) hashstack.HashMode {
+	var hashmode hashstack.HashMode
+	path := fmt.Sprintf("/api/hash_modes?mode=%d", mode)
+	if err := getJSON(path, &hashmode); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	return hashmode
+}
+
 var modeCmd = &cobra.Command{
 	Use:    "modes",
 	Short:  "Prints a list of supported hash modes",
@@ -24,7 +33,7 @@ var modeCmd = &cobra.Command{
 			return hashModes[i].HashMode < hashModes[j].HashMode
 		})
 		tbl := uitable.New()
-		tbl.AddRow("MODE", "ALGORITHM")
+		tbl.AddRow("#", "Name")
 		for _, mode := range hashModes {
 			tbl.AddRow(mode.HashMode, mode.Algorithm)
 		}

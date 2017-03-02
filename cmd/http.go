@@ -54,6 +54,9 @@ func getRangeJSON(path string, data interface{}) error {
 	if err != nil {
 		return err
 	}
+	if total < 1 {
+		return nil
+	}
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s", flServerURL, path), nil)
 	if err != nil {
 		return errors.New("there was an error creating the request")
@@ -121,6 +124,8 @@ func getJSON(path string, data interface{}) error {
 	switch resp.StatusCode {
 	case 401:
 		return errors.New("authentication failed: you may need to run auth again")
+	case 403:
+		return errors.New("you do not have access to that resource")
 	case 400:
 		return errors.New("there were some validation errors for your request")
 	case 404:
@@ -159,6 +164,8 @@ func postJSON(path string, data interface{}) ([]byte, error) {
 	case 401:
 		return body, errors.New("authentication failed: you may need to run auth again")
 	case 400:
+		msg, _ := ioutil.ReadAll(resp.Body)
+		debug(string(msg))
 		return body, errors.New("there were some validation errors for your request")
 	case 404:
 		return body, errors.New("item not found on server")

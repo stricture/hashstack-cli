@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"os/user"
 	"path/filepath"
 
@@ -9,27 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var authedSubCommands = []string{
-	"project",
-}
-
-func topUsage(cmd *cobra.Command, args []string) {
-	cmd.Usage()
-}
-
-// RootCmd is the root level command for the cli.
-var RootCmd = &cobra.Command{
-	Use:   "hashstack-cli",
-	Short: "Hashstack-cli is a cli client for Hashstack",
-	Long:  "Hashstack-cli is a cli client for a remote Hashstack server",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("try --help or hashstack-cli auth")
-	},
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		debug(fmt.Sprintf("running sub command %s", cmd.Name()))
-	},
-}
-
+// Global command line flags.
 var (
 	flCfgFile   string
 	flDebug     bool
@@ -42,13 +23,30 @@ type config struct {
 	Token     string `toml:"token"`
 }
 
+func debug(msg string) {
+	if flDebug {
+		fmt.Printf("DEBUG: %s\n", msg)
+	}
+}
+
+var authedSubCommands = []string{
+	"project",
+}
+
+func ensureAuth(cmd *cobra.Command, args []string) {
+	if flServerURL == "" || flToken == "" {
+		writeStdErrAndExit("Use hashstack-cli login before continuing")
+	}
+}
+
+// initcfg will load the configurationfile in the user's home directory.
 func initcfg() {
 	if flCfgFile == "" {
 		usr, err := user.Current()
 		if err != nil || usr.HomeDir == "" {
 			writeStdErrAndExit("There was an error locating your home directory.\nPlease use --config")
 		}
-		flCfgFile = filepath.Join(usr.HomeDir, "hashstack-cli.toml")
+		flCfgFile = filepath.Join(usr.HomeDir, ".hashstack", "config")
 	}
 	debug(fmt.Sprintf("configuration file: %s", flCfgFile))
 	var cfg config
@@ -62,20 +60,39 @@ func initcfg() {
 	debug(fmt.Sprintf("token: %s", flToken))
 }
 
+// writecfg will save the required data to the user's configuration file.
+func writecfg() {
+	tomlString := fmt.Sprintf("server_url = \"%s\"\ntoken = \"%s\"", flServerURL, flToken)
+	os.Remove(flCfgFile)
+	os.Mkdir(filepath.Dir(flCfgFile), 0655)
+	fh, err := os.OpenFile(flCfgFile, os.O_CREATE|os.O_WRONLY, 0655)
+	if err != nil {
+		debug(err.Error())
+		writeStdErrAndExit("There was an error opening the configuration file.")
+	}
+	defer fh.Close()
+	if _, err := fh.WriteString(tomlString); err != nil {
+		debug(err.Error())
+		writeStdErrAndExit("There was an error writing to the configuration file.")
+	}
+}
+
+// RootCmd is the root level command for the cli.
+// Executing this command will print the usage information and exit.
+var RootCmd = &cobra.Command{
+	Use:   "hashstack-cli",
+	Short: "Execute commands against a Hashstack server. Try -h or --help for more information.",
+	Long:  "Execute commands against a Hashstack server. Try -h or --help for more information.",
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Usage()
+	},
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		debug(fmt.Sprintf("running sub command %s", cmd.Name()))
+	},
+}
+
 func init() {
 	cobra.OnInitialize(initcfg)
-	RootCmd.PersistentFlags().StringVar(&flCfgFile, "config", "", "config file (default is $HOME/hashstack-cli.toml)")
-	RootCmd.PersistentFlags().BoolVar(&flDebug, "debug", false, "enable debug")
-}
-
-func debug(msg string) {
-	if flDebug {
-		fmt.Printf("DEBUG %s\n", msg)
-	}
-}
-
-func ensureAuth(cmd *cobra.Command, args []string) {
-	if flServerURL == "" || flToken == "" {
-		writeStdErrAndExit("use hashstack-cli auth before continuing")
-	}
+	RootCmd.PersistentFlags().StringVar(&flCfgFile, "config", "", "config file (default: $HOME/.hashstack/config)")
+	RootCmd.PersistentFlags().BoolVar(&flDebug, "debug", false, "enable debug output")
 }
