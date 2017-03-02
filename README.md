@@ -2,6 +2,12 @@
 A cross-platform CLI interface to Hashstack
 
 ## Start to Finish
+#### Login
+```
+ .\hashstack-cli.exe login http://192.168.7.98:8000 admin
+Password: *****
+Authentication credentials cached in C:\Users\tom\.hashstack\config
+```
 
 #### Add a project
 ```
