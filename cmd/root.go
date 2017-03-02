@@ -21,6 +21,11 @@ var (
 	flToken     string
 )
 
+func percentOf(current int, all int) float64 {
+	percent := (float64(current) * float64(100)) / float64(all)
+	return percent
+}
+
 type config struct {
 	ServerURL string `toml:"server_url"`
 	Token     string `toml:"token"`
