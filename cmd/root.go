@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -13,6 +15,7 @@ import (
 // Global command line flags.
 var (
 	flCfgFile   string
+	flInsecure  bool
 	flDebug     bool
 	flServerURL string
 	flToken     string
@@ -94,5 +97,12 @@ var RootCmd = &cobra.Command{
 func init() {
 	cobra.OnInitialize(initcfg)
 	RootCmd.PersistentFlags().StringVar(&flCfgFile, "config", "", "config file (default: $HOME/.hashstack/config)")
+	RootCmd.PersistentFlags().BoolVarP(&flInsecure, "insecure", "k", false, "skip TLS certificate validation")
 	RootCmd.PersistentFlags().BoolVar(&flDebug, "debug", false, "enable debug output")
+
+	if flInsecure {
+		http.DefaultTransport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
 }
