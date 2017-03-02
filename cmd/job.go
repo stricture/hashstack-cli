@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
@@ -76,23 +77,48 @@ func statsJob(job hashstack.Job) {
 	}
 }
 
+func displayJobs(p hashstack.Project) {
+	path := fmt.Sprintf("/api/projects/%d/jobs", p.ID)
+	var jobs []hashstack.Job
+	if err := getRangeJSON(path, &jobs); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	if len(jobs) < 1 {
+		writeStdErrAndExit("There are no jobs for this project")
+	}
+	sort.Slice(jobs, func(i, j int) bool {
+		return jobs[i].CreatedAt > jobs[i].CreatedAt
+	})
+	for _, j := range jobs {
+		displayJob(os.Stdout, j)
+		fmt.Println()
+	}
+}
+
 var jobCmd = &cobra.Command{
-	Use:    "jobs <project_name|project_id> <job_id>",
-	Short:  "Attach to a projects job by project_name|project_id and job_id (-h or --help for subcommands",
-	Long:   "Attach to a projects job by project_name|project_id and job_id (-h or --help for subcommands",
+	Use:    "jobs <project_name|project_id> [job_id]",
+	Short:  "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands)",
+	Long:   "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands)",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			cmd.Usage()
 			return
 		}
-
-		i, err := strconv.Atoi(args[1])
-		if err != nil {
-			writeStdErrAndExit("job_id is invalid")
+		switch len(args) {
+		case 1:
+			project := getProject(args[0])
+			displayJobs(project)
+		case 2:
+			i, err := strconv.Atoi(args[1])
+			if err != nil {
+				writeStdErrAndExit("job_id is invalid")
+			}
+			project := getProject(args[0])
+			statsJob(getJob(project.ID, int64(i)))
+		default:
+			cmd.Usage()
 		}
-		project := getProject(args[0])
-		statsJob(getJob(project.ID, int64(i)))
 	},
 }
 
