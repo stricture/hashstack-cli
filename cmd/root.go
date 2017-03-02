@@ -80,6 +80,15 @@ func writecfg() {
 	}
 }
 
+func initenv() {
+	if flInsecure {
+		debug("setting transport to insecure")
+		http.DefaultTransport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+}
+
 // RootCmd is the root level command for the cli.
 // Executing this command will print the usage information and exit.
 var RootCmd = &cobra.Command{
@@ -95,14 +104,8 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	cobra.OnInitialize(initcfg)
+	cobra.OnInitialize(initcfg, initenv)
 	RootCmd.PersistentFlags().StringVar(&flCfgFile, "config", "", "config file (default: $HOME/.hashstack/config)")
 	RootCmd.PersistentFlags().BoolVarP(&flInsecure, "insecure", "k", false, "skip TLS certificate validation")
 	RootCmd.PersistentFlags().BoolVar(&flDebug, "debug", false, "enable debug output")
-
-	if flInsecure {
-		http.DefaultTransport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-	}
 }
