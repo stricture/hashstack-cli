@@ -26,6 +26,46 @@ func percentOf(current int, all int) float64 {
 	return percent
 }
 
+func prettyUptime(uptime int64) string {
+	var d, h, m, s int64
+	var ret string
+	if uptime <= 0 {
+		uptime = 0
+	}
+
+	if uptime >= 86400 {
+		d = uptime / 86400
+		uptime = uptime - (86400 * d)
+	}
+	if uptime >= 3600 {
+		h = uptime / 3600
+		uptime = uptime - (3600 * h)
+	}
+	if uptime >= 60 {
+		m = uptime / 60
+		uptime = uptime - (60 * m)
+	}
+	s = uptime
+
+	ret = fmt.Sprintf("%d day", d)
+	if d != 1 {
+		ret = fmt.Sprintf("%ss", ret)
+	}
+	ret = fmt.Sprintf("%s %d hour", ret, h)
+	if h != 1 {
+		ret = fmt.Sprintf("%ss", ret)
+	}
+	ret = fmt.Sprintf("%s %d minute", ret, m)
+	if m != 1 {
+		ret = fmt.Sprintf("%ss", ret)
+	}
+	ret = fmt.Sprintf("%s %d second", ret, s)
+	if s != 1 {
+		ret = fmt.Sprintf("%ss", ret)
+	}
+	return ret
+}
+
 type config struct {
 	ServerURL string `toml:"server_url"`
 	Token     string `toml:"token"`
