@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"sort"
 	"strconv"
@@ -31,6 +32,15 @@ var (
 	flCustomCharset4      string
 )
 
+func getTasks(projectID, jobID int64) []hashstack.Task {
+	var tasks []hashstack.Task
+	path := fmt.Sprintf("/api/projects/%d/jobs/%d/tasks", projectID, jobID)
+	if err := getJSON(path, &tasks); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	return tasks
+}
+
 func displayJob(w io.Writer, job hashstack.Job) {
 	status := "Running"
 	if job.IsExhausted {
@@ -45,8 +55,11 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	}
 	getListByID(&list)
 	mode := getMode(list.HashMode)
-	liststat := fmt.Sprintf("%d/%d (%d%%)", list.RecoveredCount, list.DigestCount, list.RecoveredCount/list.DigestCount)
-
+	liststat := fmt.Sprintf("%d/%d (%0.2f%%)", list.RecoveredCount, list.DigestCount, percentOf(int(list.RecoveredCount), int(list.DigestCount)))
+	firstTime := "has not started"
+	if job.FirstTaskTime != 0 {
+		firstTime = humanize.Time(time.Unix(job.FirstTaskTime, 0))
+	}
 	fmt.Fprintf(w, "Job.............: %s\n", job.Name)
 	fmt.Fprintf(w, "ID..............: %d\n", job.ID)
 	fmt.Fprintf(w, "Status..........: %s\n", status)
@@ -55,9 +68,42 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	fmt.Fprintf(w, "Max Devices.....: %d\n", job.MaxDedicatedDevices)
 	fmt.Fprintf(w, "Priority........: %d\n", job.Priority)
 	fmt.Fprintf(w, "Time.Created....: %s\n", humanize.Time(time.Unix(job.CreatedAt, 0)))
-	fmt.Fprintf(w, "Time.Started....: %s\n", humanize.Time(time.Unix(job.FirstTaskTime, 0)))
+	fmt.Fprintf(w, "Time.Started....: %s\n", firstTime)
 	fmt.Fprintf(w, "Recovered.......: %s\n", liststat)
-	// TODO SPEED and TASKS
+
+	tasks := getTasks(job.ProjectID, job.ID)
+	var (
+		bigTotalSpdCnt = big.NewInt(0)
+		bigTotalSpdMs  = big.NewInt(0)
+		bigspeed       = big.NewInt(0)
+		bigeta         = big.NewInt(0)
+		bigprogress    = big.NewInt(0)
+	)
+
+	for _, task := range tasks {
+		for x, micro := range task.Micros {
+			xbig := big.NewInt(micro.Status.SpeedCnt)
+			bigTotalSpdCnt.Add(bigTotalSpdCnt, xbig)
+			xspdbig := big.NewInt(int64(micro.Status.SpeedMS))
+			bigTotalSpdMs.Add(bigTotalSpdMs, xspdbig)
+			if x == len(task.Micros)-1 {
+				y := big.NewInt(0)
+				y.SetString(micro.Status.ProgressTotal, 10)
+				bigprogress.Add(bigprogress, y)
+			}
+		}
+	}
+	if bigTotalSpdMs.Uint64() != 0 {
+		bigspeed = bigTotalSpdMs.Div(bigTotalSpdCnt, bigTotalSpdMs)
+	}
+	if bigprogress.Uint64() != 0 {
+		bigeta.Div(bigprogress, bigspeed)
+	}
+	bigspeed.Mul(bigspeed, big.NewInt(1000))
+
+	fmt.Fprintf(w, "Speed...........: %s/s\n", humanize.BigComma(bigspeed))
+	fmt.Fprintf(w, "ETA.............: %s\n", prettyUptime(bigeta.Int64()))
+	fmt.Fprintln(w)
 }
 
 func getJob(projectID, jobID int64) hashstack.Job {
