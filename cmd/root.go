@@ -151,6 +151,6 @@ var RootCmd = &cobra.Command{
 func init() {
 	cobra.OnInitialize(initcfg, initenv)
 	RootCmd.PersistentFlags().StringVar(&flCfgFile, "config", "", "config file (default: $HOME/.hashstack/config)")
-	RootCmd.PersistentFlags().BoolVarP(&flInsecure, "insecure", "k", false, "skip TLS certificate validation")
+	RootCmd.PersistentFlags().BoolVar(&flInsecure, "insecure", false, "skip TLS certificate validation")
 	RootCmd.PersistentFlags().BoolVar(&flDebug, "debug", false, "enable debug output")
 }
