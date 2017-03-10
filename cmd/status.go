@@ -19,12 +19,12 @@ func displayStats() {
 	)
 
 	if stats.GPULoadMax > 0 {
-		gpuload = fmt.Sprintf("%d/%d (%d%%)", stats.GPULoad, stats.GPULoadMax, stats.GPULoad/stats.GPULoadMax)
+		gpuload = fmt.Sprintf("%d/%d (%0.2f%%)", stats.GPULoad, stats.GPULoadMax, percentOf(int(stats.GPULoad), int(stats.GPULoadMax)))
 	} else {
 		gpuload = fmt.Sprintf("%d/%d (0%%)", stats.GPULoad, stats.GPULoadMax)
 	}
 	if stats.CPULoadMax > 0 {
-		cpuload = fmt.Sprintf("%d/%d (%d%%)", stats.CPULoad, stats.CPULoadMax, stats.CPULoad/stats.CPULoadMax)
+		cpuload = fmt.Sprintf("%d/%d (%0.2f%%)", stats.CPULoad, stats.CPULoadMax, percentOf(int(stats.CPULoad), int(stats.CPULoadMax)))
 	} else {
 		cpuload = fmt.Sprintf("%d/%d (0%%)", stats.CPULoad, stats.CPULoadMax)
 	}
