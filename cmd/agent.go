@@ -34,7 +34,7 @@ func displayAgent(a hashstack.Agent) {
 	fmt.Printf("Last.Seen.......: %s\n", humanize.Time(time.Unix(agent.CheckinAt, 0)))
 	fmt.Printf("Memory..........: %s\n", memstat)
 	for i, d := range agent.Devices {
-		fmt.Printf("Dev.#%d..........: %s, %d Mhz, %d%% load, %dC, %d%% Fan",
+		fmt.Printf("Dev.#%d..........: %s, %d Mhz, %d%% load, %dC, %d%% Fan\n",
 			i+1,
 			d.Name,
 			d.CurrentClockFrequency,
