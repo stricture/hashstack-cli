@@ -175,7 +175,7 @@ func deleteProject(arg string) {
 	if err := deleteHTTP(path); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
-	fmt.Println("project deleted successfully")
+	fmt.Println("The project was deleted successfully.")
 }
 
 var delProjectCmd = &cobra.Command{
@@ -187,7 +187,7 @@ Delete a project by name or id. Deleting a project will delete any associated li
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			writeStdErrAndExit("name or id is required")
+			writeStdErrAndExit("name or id is required.")
 		}
 		deleteProject(args[0])
 	},
@@ -208,7 +208,7 @@ The name should not include special characters or spaces. The description is req
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_name and description are required")
+			writeStdErrAndExit("project_name and description are required.")
 		}
 		req := projectRequest{
 			Name:        args[0],
@@ -220,7 +220,8 @@ The name should not include special characters or spaces. The description is req
 		}
 		var project hashstack.Project
 		if err := json.Unmarshal(body, &project); err != nil {
-			writeStdErrAndExit("error decoding JSON from server")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit(new(jsonServerError).Error())
 		}
 		displayProject(project)
 	},

@@ -83,7 +83,7 @@ var authedSubCommands = []string{
 
 func ensureAuth(cmd *cobra.Command, args []string) {
 	if flServerURL == "" || flToken == "" {
-		writeStdErrAndExit("Use hashstack-cli login before continuing")
+		writeStdErrAndExit("Use hashstack-cli login before continuing.")
 	}
 }
 
@@ -99,13 +99,13 @@ func initcfg() {
 	debug(fmt.Sprintf("configuration file: %s", flCfgFile))
 	var cfg config
 	if _, err := toml.DecodeFile(flCfgFile, &cfg); err != nil {
-		debug("no configuration file")
+		debug("CONFIG: Could not decode configuration file")
 		return
 	}
 	flServerURL = cfg.ServerURL
 	flToken = cfg.Token
-	debug(fmt.Sprintf("server url: %s", flServerURL))
-	debug(fmt.Sprintf("token: %s", flToken))
+	debug(fmt.Sprintf("CONFIG: SERVER_URL - %s", flServerURL))
+	debug(fmt.Sprintf("CONFIG: TOKEN - %s", flToken))
 }
 
 // writecfg will save the required data to the user's configuration file.
@@ -115,19 +115,19 @@ func writecfg() {
 	os.Mkdir(filepath.Dir(flCfgFile), 0655)
 	fh, err := os.OpenFile(flCfgFile, os.O_CREATE|os.O_WRONLY, 0655)
 	if err != nil {
-		debug(err.Error())
+		debug(fmt.Sprintf("Error: %s", err.Error()))
 		writeStdErrAndExit("There was an error opening the configuration file.")
 	}
 	defer fh.Close()
 	if _, err := fh.WriteString(tomlString); err != nil {
-		debug(err.Error())
+		debug(fmt.Sprintf("Error: %s", err.Error()))
 		writeStdErrAndExit("There was an error writing to the configuration file.")
 	}
 }
 
 func initenv() {
 	if flInsecure {
-		debug("setting transport to insecure")
+		debug("SECURITY: All requests are set to insecure")
 		http.DefaultTransport = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
@@ -144,7 +144,7 @@ var RootCmd = &cobra.Command{
 		cmd.Usage()
 	},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		debug(fmt.Sprintf("running sub command %s", cmd.Name()))
+		debug(fmt.Sprintf("Command: running sub command %s", cmd.Name()))
 	},
 }
 

@@ -60,7 +60,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	if job.FirstTaskTime != 0 {
 		firstTime = humanize.Time(time.Unix(job.FirstTaskTime, 0))
 	}
-	fmt.Fprintf(w, "Job.............: %s\n", job.Name)
+	fmt.Fprintf(w, "Name............: %s\n", job.Name)
 	fmt.Fprintf(w, "ID..............: %d\n", job.ID)
 	fmt.Fprintf(w, "Status..........: %s\n", status)
 	fmt.Fprintf(w, "Hash.Type.......: %d (%s)\n", mode.HashMode, mode.Algorithm)
@@ -116,6 +116,7 @@ func getJob(projectID, jobID int64) hashstack.Job {
 }
 
 func statsJob(job hashstack.Job) {
+	displayJob(os.Stdout, job)
 	c := time.Tick(5 * time.Second)
 	for range c {
 		job = getJob(job.ProjectID, job.ID)
@@ -130,7 +131,7 @@ func displayJobs(p hashstack.Project) {
 		writeStdErrAndExit(err.Error())
 	}
 	if len(jobs) < 1 {
-		writeStdErrAndExit("There are no jobs for this project")
+		writeStdErrAndExit("There are no jobs for this project.")
 	}
 	sort.Slice(jobs, func(i, j int) bool {
 		return jobs[i].CreatedAt > jobs[i].CreatedAt
@@ -158,7 +159,7 @@ var jobCmd = &cobra.Command{
 		case 2:
 			i, err := strconv.Atoi(args[1])
 			if err != nil {
-				writeStdErrAndExit("job_id is invalid")
+				writeStdErrAndExit("The provided job_id is not valid.")
 			}
 			project := getProject(args[0])
 			statsJob(getJob(project.ID, int64(i)))
@@ -181,7 +182,7 @@ var pauseJobCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_name|project_id and job_id are required")
+			writeStdErrAndExit("project_name|project_id and job_id are required.")
 		}
 		project := getProject(args[0])
 		i, err := strconv.Atoi(args[1])
@@ -198,7 +199,7 @@ var pauseJobCmd = &cobra.Command{
 		if _, err := patchJSON(path, &update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("job has been paused")
+		fmt.Println("THe job has been paused.")
 	},
 }
 
@@ -209,7 +210,7 @@ var delJobCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_name|project_id and job_id are required")
+			writeStdErrAndExit("project_name|project_id and job_id are required.")
 		}
 		project := getProject(args[0])
 		i, err := strconv.Atoi(args[1])
@@ -228,7 +229,7 @@ var delJobCmd = &cobra.Command{
 		if err := deleteHTTP(path); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("job was successfully deleted")
+		fmt.Println("The job was successfully deleted.")
 	},
 }
 
@@ -239,12 +240,12 @@ var startJobCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_name|project_id and job_id are required")
+			writeStdErrAndExit("project_name|project_id and job_id are required.")
 		}
 		project := getProject(args[0])
 		i, err := strconv.Atoi(args[1])
 		if err != nil {
-			writeStdErrAndExit("job_id is invalid")
+			writeStdErrAndExit("The job_id provided is not valid.")
 		}
 		job := getJob(project.ID, int64(i))
 		update := updateRequest{
@@ -293,13 +294,13 @@ type attackRequest struct {
 }
 
 var addJobCmd = &cobra.Command{
-	Use:    "add <project_name|project_id> <list_name|list_id> <name> <dictionary|mask>",
+	Use:    "add <project_name|project_id> <list_name|list_id> <name> <wordlist|mask>",
 	Short:  "Add a job for the provided project and list",
 	Long:   "Add a job for the provided project and list",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 4 {
-			writeStdErrAndExit("missing required arugment")
+			writeStdErrAndExit("Missing required argument.")
 		}
 		var (
 			name = args[2]
@@ -318,20 +319,20 @@ var addJobCmd = &cobra.Command{
 				ruleFile     hashstack.File
 			)
 			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[3]), &wordlistFile); err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("provided dictionary does not exist on the server")
+				debug(fmt.Sprintf("Error: %s", err.Error()))
+				writeStdErrAndExit("The provided wordlist does not exist on the server.")
 			}
 			step.WordlistID = wordlistFile.ID
 			if flRulesFile != "" {
 				if err := getJSON(fmt.Sprintf("/api/rules?filename=%s", flRulesFile), &ruleFile); err != nil {
-					debug(err.Error())
-					writeStdErrAndExit("provided rule file does not exist on the server")
+					debug(fmt.Sprintf("Error: %s", err.Error()))
+					writeStdErrAndExit("The provided rule file does not exist on the server.")
 				}
 				step.RuleID = ruleFile.ID
 			}
 		case 1:
 			if len(args) < 4 {
-				writeStdErrAndExit("two dictionary files are required for a combination attack")
+				writeStdErrAndExit("Two wordlist files are required for a combination attack.")
 			}
 			if flRuleLeft != "" {
 				step.RuleBufLeft = flRuleLeft
@@ -344,12 +345,12 @@ var addJobCmd = &cobra.Command{
 				combinationFile hashstack.File
 			)
 			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[3]), &wordlistFile); err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("provided dictionary does not exist on the server")
+				debug(fmt.Sprintf("Error: %s", err.Error()))
+				writeStdErrAndExit("The provided wordlist does not exist on the server.")
 			}
 			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[4]), &combinationFile); err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("provided combination dictionary does not exist on the server")
+				debug(fmt.Sprintf("Error: %s", err.Error()))
+				writeStdErrAndExit("The provided combination wordlist does not exist on the server.")
 			}
 			step.WordlistID = wordlistFile.ID
 			step.WordlistCombinationID = combinationFile.ID
@@ -363,28 +364,28 @@ var addJobCmd = &cobra.Command{
 			step.IsHexCharset = flIsHexCharset
 		case 6:
 			if len(args) < 4 {
-				writeStdErrAndExit("a dictionary file and mask are required for this attack mode")
+				writeStdErrAndExit("A wordlist file and mask are required for this attack mode.")
 			}
 			var wordlistFile hashstack.File
 			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[3]), &wordlistFile); err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("provided dictionary does not exist on the server")
+				debug(fmt.Sprintf("Error: %s", err.Error()))
+				writeStdErrAndExit("The provided wordlist does not exist on the server.")
 			}
 			step.WordlistID = wordlistFile.ID
 			step.Mask = args[4]
 		case 7:
 			if len(args) < 4 {
-				writeStdErrAndExit("a mask and dictionary file are required for this attack mode")
+				writeStdErrAndExit("A mask and wordlist file are required for this attack mode.")
 			}
 			var wordlistFile hashstack.File
 			if err := getJSON(fmt.Sprintf("/api/wordlists?filename=%s", args[4]), &wordlistFile); err != nil {
-				debug(err.Error())
-				writeStdErrAndExit("provided dictionary does not exist on the server")
+				debug(fmt.Sprintf("Error: %s", err.Error()))
+				writeStdErrAndExit("The provided wordlist does not exist on the server.")
 			}
 			step.WordlistID = wordlistFile.ID
 			step.Mask = args[3]
 		default:
-			writeStdErrAndExit("invalid attack-mode")
+			writeStdErrAndExit("The attack-mode provided is not valid.")
 		}
 		attack := attackRequest{
 			Title: fmt.Sprintf("hashstack-cli-%d-%d-%s", project.ID, list.ID, name),
@@ -397,8 +398,8 @@ var addJobCmd = &cobra.Command{
 		debug("uploaded temporary attack plan")
 		var plan hashstack.Attack
 		if err := json.Unmarshal(data, &plan); err != nil {
-			debug(err.Error())
-			writeStdErrAndExit("there was an error decoding a response from the server")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit(new(jsonServerError).Error())
 		}
 
 		jobreq := jobRequest{
@@ -415,7 +416,8 @@ var addJobCmd = &cobra.Command{
 		}
 		var job hashstack.Job
 		if err := json.Unmarshal(data, &job); err != nil {
-			writeStdErrAndExit("There was an error decoding the response from the server.")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit(new(jsonServerError).Error())
 		}
 		statsJob(job)
 	},

@@ -62,7 +62,7 @@ func displayLists(arg string) {
 		writeStdErrAndExit(err.Error())
 	}
 	if count < 1 {
-		writeStdErrAndExit("You have not created any lists for this project")
+		writeStdErrAndExit("You have not created any lists for this project.")
 	}
 	path := fmt.Sprintf("/api/projects/%d/lists", project.ID)
 	var lists []hashstack.List
@@ -127,16 +127,16 @@ func uploadList(pid int64, mode int, filename string) {
 		resp     []byte
 	)
 	if err := getJSON(fmt.Sprintf("/api/hash_modes?mode=%d", mode), &hashMode); err != nil {
-		writeStdErrAndExit(err.Error())
+		writeStdErrAndExit("The selected mode is not supported by the server.")
 	}
 	if !hashMode.IsSupported {
-		writeStdErrAndExit("the selected mode is not supported by the server")
+		writeStdErrAndExit("The selected mode is not supported by the server.")
 	}
 	if !hashMode.IsBinary && !hashMode.IsScrapable {
 		file, err := os.Open(filename)
 		if err != nil {
-			debug(err.Error())
-			writeStdErrAndExit("there was an error opening the provided file")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit("There was an error opening the provided file.")
 		}
 		defer file.Close()
 		var body bytes.Buffer
@@ -144,12 +144,12 @@ func uploadList(pid int64, mode int, filename string) {
 		_, name := filepath.Split(file.Name())
 		part, err := form.CreateFormFile("file", file.Name())
 		if err != nil {
-			debug(err.Error())
-			writeStdErrAndExit("there was an error generating the request")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit(new(requestCreateError).Error())
 		}
 		if _, err := io.Copy(part, file); err != nil {
-			debug(err.Error())
-			writeStdErrAndExit("there was an error reading the provided file")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit("There was an error reading the provided file.")
 		}
 		form.WriteField("hash_mode", strconv.Itoa(hashMode.HashMode))
 		form.WriteField("name", name)
@@ -174,8 +174,8 @@ func uploadList(pid int64, mode int, filename string) {
 		_, name := filepath.Split(filename)
 		file, err := os.Open(filename)
 		if err != nil {
-			debug(err.Error())
-			writeStdErrAndExit("there was an error opening the provided file")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit("There was an error opening the provided file.")
 		}
 		defer file.Close()
 		var hashes []binaryScrapableItem
@@ -187,7 +187,6 @@ func uploadList(pid int64, mode int, filename string) {
 			}
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) != 2 {
-				// TODO: Should we warn here?
 				continue
 			}
 			hashes = append(hashes, binaryScrapableItem{
@@ -196,8 +195,8 @@ func uploadList(pid int64, mode int, filename string) {
 			})
 		}
 		if err := scanner.Err(); err != nil {
-			debug(err.Error())
-			writeStdErrAndExit("there was an error reading the file")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit("There was an error reading the file.")
 		}
 		req := binaryScrapableRequest{
 			ProjectID: pid,
@@ -214,8 +213,8 @@ func uploadList(pid int64, mode int, filename string) {
 	if hashMode.IsBinary {
 		data, err := ioutil.ReadFile(filename)
 		if err != nil {
-			debug(err.Error())
-			writeStdErrAndExit("there was an error reading the provided file")
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit("There was an error reading the provided file.")
 		}
 		_, name := filepath.Split(filename)
 		req := binaryRequest{
@@ -233,8 +232,8 @@ func uploadList(pid int64, mode int, filename string) {
 
 	var list hashstack.List
 	if err := json.Unmarshal(resp, &list); err != nil {
-		debug(err.Error())
-		writeStdErrAndExit("error decoding json returned form server")
+		debug(fmt.Sprintf("Error: %s", err.Error()))
+		writeStdErrAndExit(new(jsonServerError).Error())
 	}
 	displayList(list)
 }
@@ -249,7 +248,7 @@ using the "modes" subcommand. The file name must be unique across projects.
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 3 {
-			writeStdErrAndExit("project_name|project_id, mode, and file are required")
+			writeStdErrAndExit("project_name|project_id, mode, and file are required.")
 		}
 		var (
 			pidStr   = args[0]
@@ -270,7 +269,7 @@ func deleteList(projectID int64, listID int64) {
 	if err := deleteHTTP(path); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
-	fmt.Println("list deleted successfully")
+	fmt.Println("The list was deleted successfully.")
 }
 
 var delListCmd = &cobra.Command{
@@ -283,7 +282,7 @@ the associated plains.
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_name|project_id and list_name|list_id are required")
+			writeStdErrAndExit("project_name|project_id and list_name|list_id are required.")
 		}
 		project := getProject(args[0])
 		list := getList(project.ID, args[1])
@@ -297,7 +296,7 @@ var plainsListCmd = &cobra.Command{
 	Long:  "Download plains for a list",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
-			writeStdErrAndExit("project_name|project_id and list_id is required")
+			writeStdErrAndExit("project_name|project_id and list_id is required.")
 		}
 		project := getProject(args[0])
 		list := getList(project.ID, args[1])

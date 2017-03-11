@@ -68,7 +68,7 @@ var addWordlistCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			writeStdErrAndExit("file is required")
+			writeStdErrAndExit("file is required.")
 		}
 		file := args[0]
 		uploadFile("/api/wordlists", file)
@@ -84,7 +84,7 @@ func deleteWordlist(filename string) {
 	if err := deleteHTTP(path); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
-	fmt.Println("wordlist deleted successfully")
+	fmt.Println("The wordlist was deleted successfully.")
 }
 
 var delWordlistCmd = &cobra.Command{
@@ -94,7 +94,7 @@ var delWordlistCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			writeStdErrAndExit("file_name is required")
+			writeStdErrAndExit("file_name is required.")
 		}
 		deleteWordlist(args[0])
 	},

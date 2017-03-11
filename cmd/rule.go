@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"sort"
-
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -68,7 +67,7 @@ var addRuleCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			writeStdErrAndExit("file is required")
+			writeStdErrAndExit("file is required.")
 		}
 		file := args[0]
 		uploadFile("/api/rules", file)
@@ -84,7 +83,7 @@ func deleteRule(filename string) {
 	if err := deleteHTTP(path); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
-	fmt.Println("rule file deleted successfully")
+	fmt.Println("The rule was deleted successfully.")
 }
 
 var delRuleCmd = &cobra.Command{
@@ -94,7 +93,7 @@ var delRuleCmd = &cobra.Command{
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			writeStdErrAndExit("file_name is required")
+			writeStdErrAndExit("file_name is required.")
 		}
 		deleteRule(args[0])
 	},
