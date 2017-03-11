@@ -54,24 +54,24 @@ func displayAgents() {
 	})
 	for _, a := range agents {
 		displayAgent(a)
-		fmt.Println()
 	}
 }
 
 var agentCmd = &cobra.Command{
-	Use:    "agents [id]",
-	Short:  "Display a list of agents connected to the cluster",
-	Long:   "Display a list of agents connected to the cluster",
+	Use:   "agents [id]",
+	Short: "Display a list of agents connected to the cluster",
+	Long: `
+Display a list of agents connected to the cluster. If an id is provided, only information
+on that agent will be displayed.`,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		switch len(args) {
 		case 0:
 			displayAgents()
-
 		case 1:
 			i, err := strconv.Atoi(args[0])
 			if err != nil {
-				writeStdErrAndExit("invalid agent id")
+				writeStdErrAndExit(fmt.Sprintf("%s is not a valid agent id.", args[0]))
 			}
 			displayAgent(hashstack.Agent{
 				ID: int64(i),
