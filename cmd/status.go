@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/spf13/cobra"
 	hashstack "github.com/stricture/hashstack-server-core-ng"
@@ -36,6 +37,25 @@ func displayStats() {
 	fmt.Printf("Load.CPU.......: %s\n", cpuload)
 	fmt.Printf("Temp.GPU.......: %dC - %dC\n", stats.LowestGPUTemp, stats.HighestGPUTemp)
 	fmt.Printf("Temp.CPU.......: %dC - %dC\n", stats.LowestCPUTemp, stats.HighestCPUTemp)
+	var agents []hashstack.Agent
+	if err := getRangeJSON("/api/agents", &agents); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	sort.Slice(agents, func(i, j int) bool {
+		return agents[i].CreatedAt > agents[j].CreatedAt
+	})
+	for j, agent := range agents {
+		for i, d := range agent.Devices {
+			fmt.Printf("Agent.#%d.Dev.#%d..........: %s, %d Mhz, %d%% load, %dC, %d%% Fan\n",
+				j+1,
+				i+1,
+				d.Name,
+				d.CurrentClockFrequency,
+				d.Load,
+				d.Temperature,
+				d.FanSpeed)
+		}
+	}
 	fmt.Println()
 }
 

@@ -171,6 +171,21 @@ func deleteProject(arg string) {
 	} else {
 		p.ID = int64(i)
 	}
+	jobs, _ := getJobs(p.ID)
+	for _, job := range jobs {
+		jobPath := fmt.Sprintf("/api/projects/%d/jobs/%d", p.ID, job.ID)
+		if err := deleteHTTP(jobPath); err != nil {
+			continue
+		}
+		var attack hashstack.Attack
+		if err := getJSON(fmt.Sprintf("/api/attacks/%d", job.AttackID), &attack); err != nil {
+			continue
+		}
+		if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
+			deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
+		}
+	}
+
 	path := fmt.Sprintf("/api/projects/%d", p.ID)
 	if err := deleteHTTP(path); err != nil {
 		writeStdErrAndExit(err.Error())

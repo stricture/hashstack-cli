@@ -80,19 +80,26 @@ func displayJob(w io.Writer, job hashstack.Job) {
 		bigprogress    = big.NewInt(0)
 	)
 
+	debug(fmt.Sprintf("task length: %d", len(tasks)))
 	for _, task := range tasks {
+		debug(fmt.Sprintf("micro length %d", len(task.Micros)))
 		for x, micro := range task.Micros {
 			xbig := big.NewInt(micro.Status.SpeedCnt)
 			bigTotalSpdCnt.Add(bigTotalSpdCnt, xbig)
+			debug(fmt.Sprintf("big_speed set to %s", bigTotalSpdCnt.String()))
+
 			xspdbig := big.NewInt(int64(micro.Status.SpeedMS))
 			bigTotalSpdMs.Add(bigTotalSpdMs, xspdbig)
+
 			if x == len(task.Micros)-1 {
 				y := big.NewInt(0)
 				y.SetString(micro.Status.ProgressTotal, 10)
 				bigprogress.Add(bigprogress, y)
+				bigTotalSpdMs.Div(bigTotalSpdMs, big.NewInt(int64(len(task.Micros))))
 			}
 		}
 	}
+
 	if bigTotalSpdMs.Uint64() != 0 {
 		bigspeed = bigTotalSpdMs.Div(bigTotalSpdCnt, bigTotalSpdMs)
 	}
@@ -100,6 +107,8 @@ func displayJob(w io.Writer, job hashstack.Job) {
 		bigeta.Div(bigprogress, bigspeed)
 	}
 	bigspeed.Mul(bigspeed, big.NewInt(1000))
+
+	//strspeed := prettySpeed(bigspeed)
 
 	fmt.Fprintf(w, "Speed...........: %s/s\n", humanize.BigComma(bigspeed))
 	fmt.Fprintf(w, "ETA.............: %s\n", prettyUptime(bigeta.Int64()))
