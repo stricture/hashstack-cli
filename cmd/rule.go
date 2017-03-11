@@ -95,6 +95,9 @@ var delRuleCmd = &cobra.Command{
 		if len(args) < 1 {
 			writeStdErrAndExit("file_name is required.")
 		}
+		if ok := promptDelete("this file"); !ok {
+			writeStdErrAndExit("Not deleting file.")
+		}
 		deleteRule(args[0])
 	},
 }

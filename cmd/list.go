@@ -286,6 +286,9 @@ the associated plains.
 		}
 		project := getProject(args[0])
 		list := getList(project.ID, args[1])
+		if ok := promptDelete("this list"); !ok {
+			writeStdErrAndExit("Not deleting list.")
+		}
 		deleteList(project.ID, list.ID)
 	},
 }

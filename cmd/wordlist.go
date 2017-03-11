@@ -96,6 +96,9 @@ var delWordlistCmd = &cobra.Command{
 		if len(args) < 1 {
 			writeStdErrAndExit("file_name is required.")
 		}
+		if ok := promptDelete("this file"); !ok {
+			writeStdErrAndExit("Not deleting file.")
+		}
 		deleteWordlist(args[0])
 	},
 }

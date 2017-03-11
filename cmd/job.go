@@ -222,12 +222,15 @@ var delJobCmd = &cobra.Command{
 		if err := getJSON(fmt.Sprintf("/api/attacks/%d", job.AttackID), &attack); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
-			deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
+		if ok := promptDelete("this job"); !ok {
+			writeStdErrAndExit("Not deleting job.")
 		}
 		path := fmt.Sprintf("/api/projects/%d/jobs/%d", project.ID, job.ID)
 		if err := deleteHTTP(path); err != nil {
 			writeStdErrAndExit(err.Error())
+		}
+		if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
+			deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
 		}
 		fmt.Println("The job was successfully deleted.")
 	},

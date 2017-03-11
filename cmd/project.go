@@ -183,11 +183,14 @@ var delProjectCmd = &cobra.Command{
 	Short: "Delete a project by name or id",
 	Long: `
 Delete a project by name or id. Deleting a project will delete any associated lists.
-	`,
+`,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
 			writeStdErrAndExit("name or id is required.")
+		}
+		if ok := promptDelete("this project"); !ok {
+			writeStdErrAndExit("Not deleting project.")
 		}
 		deleteProject(args[0])
 	},
