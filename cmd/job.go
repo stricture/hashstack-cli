@@ -108,9 +108,9 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	}
 	bigspeed.Mul(bigspeed, big.NewInt(1000))
 
-	//strspeed := prettySpeed(bigspeed)
+	strspeed := formatHashRate(bigspeed.Uint64())
 
-	fmt.Fprintf(w, "Speed...........: %s/s\n", humanize.BigComma(bigspeed))
+	fmt.Fprintf(w, "Speed...........: %s\n", strspeed)
 	fmt.Fprintf(w, "ETA.............: %s\n", prettyUptime(bigeta.Int64()))
 	fmt.Fprintln(w)
 }
