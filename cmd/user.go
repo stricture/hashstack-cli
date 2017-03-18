@@ -20,7 +20,12 @@ func displayUsers(users []hashstack.User) {
 }
 
 func getUser(user *hashstack.User) {
-	path := fmt.Sprintf("/api/users/%d", user.ID)
+	var path string
+	if user.ID != 0 {
+		path = fmt.Sprintf("/api/users/%d", user.ID)
+	} else {
+		path = fmt.Sprintf("/api/users?username=%s", user.Username)
+	}
 	if err := getJSON(path, user); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
