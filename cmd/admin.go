@@ -57,7 +57,17 @@ can be useful when troubleshooting as another user.
 	},
 }
 
+var adminProjectsCmd = &cobra.Command{
+	User:   "projects",
+	Short:  "Displays a list of all projects",
+	Long:   "Displays a list of all projects",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+	},
+}
+
 func init() {
 	adminCmd.AddCommand(adminImpersonateCmd)
+	adminCmd.AddCommand(adminProjectsCmd)
 	RootCmd.AddCommand(adminCmd)
 }
