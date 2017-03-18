@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 
+	"time"
+
 	"github.com/spf13/cobra"
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
@@ -29,14 +31,14 @@ func displayStats() {
 	} else {
 		cpuload = fmt.Sprintf("%d/%d (0%%)", stats.CPULoad, stats.CPULoadMax)
 	}
-	fmt.Printf("Jobs...........: %d Active, %d Paused\n", stats.ActiveJobCount, stats.PausedJobCount)
-	fmt.Printf("Node.Count.....: %d\n", stats.AgentCount)
-	fmt.Printf("GPU.Count......: %d\n", stats.GPUCount)
-	fmt.Printf("CPU.Count......: %d\n", stats.CPUCount)
-	fmt.Printf("Load.GPU.......: %s\n", gpuload)
-	fmt.Printf("Load.CPU.......: %s\n", cpuload)
-	fmt.Printf("Temp.GPU.......: %dC - %dC\n", stats.LowestGPUTemp, stats.HighestGPUTemp)
-	fmt.Printf("Temp.CPU.......: %dC - %dC\n", stats.LowestCPUTemp, stats.HighestCPUTemp)
+	fmt.Printf("Jobs.....................: %d Active, %d Paused\n", stats.ActiveJobCount, stats.PausedJobCount)
+	fmt.Printf("Node.Count...............: %d\n", stats.AgentCount)
+	fmt.Printf("GPU.Count................: %d\n", stats.GPUCount)
+	fmt.Printf("CPU.Count................: %d\n", stats.CPUCount)
+	fmt.Printf("Load.GPU.................: %s\n", gpuload)
+	fmt.Printf("Load.CPU.................: %s\n", cpuload)
+	fmt.Printf("Temp.GPU.................: %dC - %dC\n", stats.LowestGPUTemp, stats.HighestGPUTemp)
+	fmt.Printf("Temp.CPU.................: %dC - %dC\n", stats.LowestCPUTemp, stats.HighestCPUTemp)
 	var agents []hashstack.Agent
 	if err := getRangeJSON("/api/agents", &agents); err != nil {
 		writeStdErrAndExit(err.Error())
@@ -44,11 +46,17 @@ func displayStats() {
 	sort.Slice(agents, func(i, j int) bool {
 		return agents[i].CreatedAt > agents[j].CreatedAt
 	})
-	for j, agent := range agents {
+	for _, agent := range agents {
+		online := "Offline"
+		isOnline := time.Now().Add(-5*time.Minute).Unix() < agent.CheckinAt
+		if isOnline {
+			online = "Online "
+		}
 		for i, d := range agent.Devices {
-			fmt.Printf("Agent.#%d.Dev.#%d..........: %s, %d Mhz, %d%% load, %dC, %d%% Fan\n",
-				j+1,
+			fmt.Printf("Agent.#%0.3d.Dev.#%0.2d.......: %s %s, %4d Mhz, %3d%% load, %2dC, %3d%% Fan\n",
+				agent.ID,
 				i+1,
+				online,
 				d.Name,
 				d.CurrentClockFrequency,
 				d.Load,
