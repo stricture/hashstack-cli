@@ -9,13 +9,13 @@ import (
 
 var adminCmd = &cobra.Command{
 	Use:   "admin",
-	Short: "Execute commands as an administrator",
+	Short: "Executes admin subcommands (-h or --help for more info)",
 	Long: `
-    Execute commands as an admin.
+Executes a subcommand as an administrator (-h or --help for a list of subcommands.
     `,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
-
+		cmd.Usage()
 	},
 }
 
@@ -54,7 +54,6 @@ can be useful when troubleshooting as another user.
 		username := args[0]
 		token := getImpersonationToken(username)
 		fmt.Printf("Authentication token for %s: %s\n", username, token)
-
 	},
 }
 
