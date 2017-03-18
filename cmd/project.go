@@ -103,7 +103,7 @@ func displayProject(p hashstack.Project) {
 	fmt.Printf("Jobs.............: %s\n", jobstat)
 	fmt.Printf("Lists............: %d\n", listCount)
 	fmt.Printf("Owner............: %s\n", owner)
-	if glDisplayMulti && len(p.Contributors) > 0 {
+	if !glDisplayMulti && len(p.Contributors) > 0 {
 		var names []string
 		for _, u := range p.Contributors {
 			names = append(names, u.Username)
@@ -152,6 +152,90 @@ Once a project is created, you will upload your lists using the project's name. 
 		}
 		glDisplayMulti = true
 		displayProjects()
+	},
+}
+
+type updateContributor struct {
+	ID int64 `json:"id"`
+}
+
+type updateProjectRequest struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	IsActive     bool   `json:"is_active"`
+	OwnerUserID  int64  `json:"owner_user_id"`
+	Contributors []updateContributor
+}
+
+var addProjectContributorCmd = &cobra.Command{
+	Use:    "add-contributor  <name|id> <username>",
+	Short:  "Adds a user to the project by username",
+	Long:   "Adds a user to the project by username.",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("name or id and username is required.")
+		}
+		project := getProject(args[0])
+		user := hashstack.User{
+			Username: args[1],
+		}
+		getUser(&user)
+		project.Contributors = append(project.Contributors, user)
+		var contribs []updateContributor
+		for _, c := range project.Contributors {
+			contribs = append(contribs, updateContributor{ID: c.ID})
+		}
+		update := updateProjectRequest{
+			Name:         project.Name,
+			Description:  project.Description,
+			IsActive:     project.IsActive,
+			OwnerUserID:  project.OwnerUserID,
+			Contributors: contribs,
+		}
+		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("User added to project")
+	},
+}
+
+var removeProjectContributorCmd = &cobra.Command{
+	Use:    "remove-contributor  <name|id> <username>",
+	Short:  "Removes a user to the project by username",
+	Long:   "Removes a user to the project by username.",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("name or id and username is required.")
+		}
+		if len(args) < 2 {
+			writeStdErrAndExit("name or id and username is required.")
+		}
+		project := getProject(args[0])
+		user := hashstack.User{
+			Username: args[1],
+		}
+		getUser(&user)
+		var contribs []updateContributor
+		for _, c := range project.Contributors {
+			if c.ID == user.ID {
+				continue
+			}
+			contribs = append(contribs, updateContributor{ID: c.ID})
+		}
+		update := updateProjectRequest{
+			Name:         project.Name,
+			Description:  project.Description,
+			IsActive:     project.IsActive,
+			OwnerUserID:  project.OwnerUserID,
+			Contributors: contribs,
+		}
+
+		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("User removed from project")
 	},
 }
 
@@ -241,5 +325,7 @@ The name should not include special characters or spaces. The description is req
 func init() {
 	projectCmd.AddCommand(addProjectCmd)
 	projectCmd.AddCommand(delProjectCmd)
+	projectCmd.AddCommand(addProjectContributorCmd)
+	projectCmd.AddCommand(removeProjectContributorCmd)
 	RootCmd.AddCommand(projectCmd)
 }
