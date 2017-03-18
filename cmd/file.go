@@ -39,6 +39,7 @@ func uploadFile(path, filename string) {
 
 	// Proxy request through progress bar.
 	bar := pb.New(body.Len()).SetUnits(pb.U_BYTES)
+	bar.SetWidth(80)
 	bar.Start()
 	proxy := bar.NewProxyReader(&body)
 	if _, err = postMultipart(path, form.FormDataContentType(), proxy); err != nil {

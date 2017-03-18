@@ -161,10 +161,14 @@ func uploadList(pid int64, mode int, filename string) {
 		form.Close()
 		// Proxy request through progress bar.
 		bar := pb.New(body.Len()).SetUnits(pb.U_BYTES)
+		bar.SetWidth(80)
 		bar.Start()
 		proxy := bar.NewProxyReader(&body)
 		resp, err = postMultipart(fmt.Sprintf("/api/projects/%d/lists/nonbinary", pid), form.FormDataContentType(), proxy)
 		if err != nil {
+			fmt.Println("")
+			fmt.Println("")
+			fmt.Println("This error likely occurred because you did not have any valid hashes.")
 			writeStdErrAndExit(err.Error())
 		}
 		bar.Finish()
@@ -311,10 +315,29 @@ var plainsListCmd = &cobra.Command{
 	},
 }
 
+var hashesListCmd = &cobra.Command{
+	Use:   "hashes <project_name|project_id> <list_name|list_id>",
+	Short: "Download hashes for a list",
+	Long:  "Download hashes for a list",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_name|project_id and list_id is required.")
+		}
+		project := getProject(args[0])
+		list := getList(project.ID, args[1])
+		body, err := getReader(fmt.Sprintf("/api/projects/%d/lists/%d/hashes", project.ID, list.ID))
+		if err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		io.Copy(os.Stdout, body)
+	},
+}
+
 func init() {
 	addListCmd.PersistentFlags().BoolVar(&flIsHexSalt, "hex-salt", false, "Assume is given in hex")
 	listCmd.AddCommand(addListCmd)
 	listCmd.AddCommand(delListCmd)
 	listCmd.AddCommand(plainsListCmd)
+	listCmd.AddCommand(hashesListCmd)
 	RootCmd.AddCommand(listCmd)
 }
