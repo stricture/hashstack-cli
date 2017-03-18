@@ -42,6 +42,7 @@ func displayAgent(a hashstack.Agent) {
 			d.Temperature,
 			d.FanSpeed)
 	}
+	fmt.Println()
 }
 
 func displayAgents() {
