@@ -65,7 +65,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	fmt.Fprintf(w, "Status..........: %s\n", status)
 	fmt.Fprintf(w, "Hash.Type.......: %d (%s)\n", mode.HashMode, mode.Algorithm)
 	fmt.Fprintf(w, "Hash.Target.....: %s\n", list.Name)
-	fmt.Fprintf(w, "Max Devices.....: %d\n", job.MaxDedicatedDevices)
+	fmt.Fprintf(w, "Max.Devices.....: %d\n", job.MaxDedicatedDevices)
 	fmt.Fprintf(w, "Priority........: %d\n", job.Priority)
 	fmt.Fprintf(w, "Time.Created....: %s\n", humanize.Time(time.Unix(job.CreatedAt, 0)))
 	fmt.Fprintf(w, "Time.Started....: %s\n", firstTime)
@@ -209,6 +209,37 @@ var pauseJobCmd = &cobra.Command{
 			writeStdErrAndExit(err.Error())
 		}
 		fmt.Println("THe job has been paused.")
+	},
+}
+
+var updateJobCmd = &cobra.Command{
+	Use:   "update <project_name|project_id> <job_id>",
+	Short: "Updates a job by project_name|project_id and job_id",
+	Long: `
+Updates a job by project_name|project_id and job_id. Can be used to update
+priority and/or max-devices.
+	`,
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_name|project_id and job_id are required.")
+		}
+		project := getProject(args[0])
+		i, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
+		}
+		job := getJob(project.ID, int64(i))
+		update := updateRequest{
+			Priority:            flPriority,
+			MaxDedicatedDevices: flMaxDedicatedDevices,
+			IsActive:            job.IsActive,
+		}
+		path := fmt.Sprintf("/api/projects/%d/jobs/%d", project.ID, job.ID)
+		if _, err := patchJSON(path, &update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("THe job has been updated.")
 	},
 }
 
@@ -450,9 +481,12 @@ func init() {
 	addJobCmd.PersistentFlags().StringVarP(&flCustomCharset2, "custom-charset2", "2", "", "User-defined charset ?2")
 	addJobCmd.PersistentFlags().StringVarP(&flCustomCharset3, "custom-charset3", "3", "", "User-defined charset ?3")
 	addJobCmd.PersistentFlags().StringVarP(&flCustomCharset4, "custom-charset4", "4", "", "User-defined charset ?4")
+	updateJobCmd.PersistentFlags().IntVar(&flPriority, "priority", 1, "The priority for this job 1-100")
+	updateJobCmd.PersistentFlags().IntVar(&flMaxDedicatedDevices, "max-devices", 0, "Maximum devices across the entire cluster to use, 0 is unlimited")
 	jobCmd.AddCommand(addJobCmd)
 	jobCmd.AddCommand(pauseJobCmd)
 	jobCmd.AddCommand(startJobCmd)
+	jobCmd.AddCommand(updateJobCmd)
 	jobCmd.AddCommand(delJobCmd)
 	RootCmd.AddCommand(jobCmd)
 }

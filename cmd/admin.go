@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
+	"time"
 
+	"os"
+
+	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
@@ -98,8 +103,163 @@ var adminProjectsCmd = &cobra.Command{
 	},
 }
 
+func displayAdminJob(job hashstack.Job) {
+	w := os.Stdout
+	firstTime := "has not started"
+	if job.FirstTaskTime != 0 {
+		firstTime = humanize.Time(time.Unix(job.FirstTaskTime, 0))
+	}
+	fmt.Fprintf(w, "Name............: %s\n", job.Name)
+	fmt.Fprintf(w, "ID..............: %d\n", job.ID)
+	fmt.Fprintf(w, "Project.ID......: %d\n", job.ProjectID)
+	fmt.Fprintf(w, "Max.Devices.....: %d\n", job.MaxDedicatedDevices)
+	fmt.Fprintf(w, "Priority........: %d\n", job.Priority)
+	fmt.Fprintf(w, "Time.Created....: %s\n", humanize.Time(time.Unix(job.CreatedAt, 0)))
+	fmt.Fprintf(w, "Time.Started....: %s\n", firstTime)
+	fmt.Fprintln(w)
+}
+
+func displayAdminJobs(jobs []hashstack.Job) {
+	for _, j := range jobs {
+		displayAdminJob(j)
+	}
+}
+
+func getAdminJobs() []hashstack.Job {
+	var jobs []hashstack.Job
+	if err := getJSON("/api/admin/jobs", &jobs); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	sort.Slice(jobs, func(i, j int) bool {
+		return jobs[i].CreatedAt > jobs[i].CreatedAt
+	})
+	return jobs
+}
+
+var adminJobsCmd = &cobra.Command{
+	Use:    "jobs",
+	Short:  "Displays a list of all active jobs",
+	Long:   "Displays a list of all active jobs",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		jobs := getAdminJobs()
+		displayAdminJobs(jobs)
+	},
+}
+
+func getAdminJob(projectID, jobID int64) hashstack.Job {
+	var job hashstack.Job
+	path := fmt.Sprintf("/api/admin/projects/%d/jobs/%d", projectID, jobID)
+	if err := getJSON(path, &job); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	return job
+}
+
+var adminPauseJobCmd = &cobra.Command{
+	Use:    "job-pause <project_id> <job_id>",
+	Short:  "Pauses a job by project_id and job_id",
+	Long:   "Pauses a job by project_id and job_id",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and job_id are required.")
+		}
+		projectID, err := strconv.Atoi(args[0])
+		if err != nil {
+			writeStdErrAndExit("project_id is invalid")
+		}
+		jobID, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
+		}
+		job := getAdminJob(int64(projectID), int64(jobID))
+		update := updateRequest{
+			Priority:            job.Priority,
+			MaxDedicatedDevices: job.MaxDedicatedDevices,
+			IsActive:            false,
+		}
+		path := fmt.Sprintf("/api/admin/projects/%d/jobs/%d", job.ProjectID, job.ID)
+		if _, err := patchJSON(path, &update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("The job has been paused.")
+	},
+}
+
+var adminDelJobCmd = &cobra.Command{
+	Use:    "job-delete <project_id> <job_id>",
+	Short:  "Deletes a job by project_id and job_id",
+	Long:   "Deletes a job by project_id and job_id",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and job_id are required.")
+		}
+		projectID, err := strconv.Atoi(args[0])
+		if err != nil {
+			writeStdErrAndExit("project_id is invalid")
+		}
+		jobID, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
+		}
+		job := getAdminJob(int64(projectID), int64(jobID))
+		var attack hashstack.Attack
+		if err := getJSON(fmt.Sprintf("/api/attacks/%d", job.AttackID), &attack); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		if ok := promptDelete("this job"); !ok {
+			writeStdErrAndExit("Not deleting job.")
+		}
+		path := fmt.Sprintf("/api/admin/projects/%d/jobs/%d", job.ProjectID, job.ID)
+		if err := deleteHTTP(path); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
+			deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
+		}
+		fmt.Println("The job was successfully deleted.")
+	},
+}
+
+var adminStartJobCmd = &cobra.Command{
+	Use:    "job-start <project_id> <job_id>",
+	Short:  "Starts a job by project_id and job_id",
+	Long:   "Starts a job by project_id and job_id",
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_id and job_id are required.")
+		}
+		projectID, err := strconv.Atoi(args[0])
+		if err != nil {
+			writeStdErrAndExit("project_id is invalid")
+		}
+		jobID, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
+		}
+		job := getAdminJob(int64(projectID), int64(jobID))
+		update := updateRequest{
+			Priority:            job.Priority,
+			MaxDedicatedDevices: job.MaxDedicatedDevices,
+			IsActive:            true,
+		}
+		path := fmt.Sprintf("/api/admin/projects/%d/jobs/%d", job.ProjectID, job.ID)
+		if _, err := patchJSON(path, &update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("job has been started")
+	},
+}
+
 func init() {
 	adminCmd.AddCommand(adminImpersonateCmd)
 	adminCmd.AddCommand(adminProjectsCmd)
+	adminCmd.AddCommand(adminJobsCmd)
+	adminCmd.AddCommand(adminPauseJobCmd)
+	adminCmd.AddCommand(adminStartJobCmd)
+	adminCmd.AddCommand(adminDelJobCmd)
 	RootCmd.AddCommand(adminCmd)
 }
