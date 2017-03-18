@@ -10,12 +10,19 @@ import (
 func displayUser(user hashstack.User) {
 	fmt.Printf("ID.......: %d\n", user.ID)
 	fmt.Printf("Username.: %s\n", user.Username)
-	fmt.Printf("-----------------------\n")
+	fmt.Println()
 }
 
 func displayUsers(users []hashstack.User) {
 	for _, u := range users {
 		displayUser(u)
+	}
+}
+
+func getUser(user *hashstack.User) {
+	path := fmt.Sprintf("/api/users/%d", user.ID)
+	if err := getJSON(path, user); err != nil {
+		writeStdErrAndExit(err.Error())
 	}
 }
 

@@ -18,13 +18,6 @@ var (
 	glDisplayMulti = false
 )
 
-func getUser(user *hashstack.User) {
-	path := fmt.Sprintf("/api/users/%d", user.ID)
-	if err := getJSON(path, user); err != nil {
-		writeStdErrAndExit(err.Error())
-	}
-}
-
 func getListCount(projectID int64) (int, error) {
 	path := fmt.Sprintf("/api/projects/%d/lists", projectID)
 	return getTotal(path)
