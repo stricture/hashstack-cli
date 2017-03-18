@@ -35,8 +35,12 @@ var (
 func getTasks(projectID, jobID int64) []hashstack.Task {
 	var tasks []hashstack.Task
 	path := fmt.Sprintf("/api/projects/%d/jobs/%d/tasks", projectID, jobID)
-	if err := getJSON(path, &tasks); err != nil {
-		writeStdErrAndExit(err.Error())
+	for {
+		if err := getJSON(path, &tasks); err != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		break
 	}
 	return tasks
 }
@@ -73,28 +77,51 @@ func displayJob(w io.Writer, job hashstack.Job) {
 
 	tasks := getTasks(job.ProjectID, job.ID)
 	var (
-		bigTotalSpdCnt = big.NewInt(0)
-		bigTotalSpdMs  = big.NewInt(0)
-		bigspeed       = big.NewInt(0)
-		bigeta         = big.NewInt(0)
-		bigprogress    = big.NewInt(0)
+		bigTotalSpdCnt        = big.NewInt(0)
+		bigTotalSpdMs         = big.NewInt(0)
+		bigspeed              = big.NewInt(0)
+		bigeta                = big.NewInt(0)
+		bigkeyspace           = big.NewInt(0)
+		bigkeyspacecomplete   = big.NewInt(0)
+		bigkeyspaceinprogress = big.NewInt(0)
+		activeDevices         = 0
 	)
 
 	debug(fmt.Sprintf("task length: %d", len(tasks)))
 	for _, task := range tasks {
 		debug(fmt.Sprintf("micro length %d", len(task.Micros)))
+		var (
+			tsktotal      = big.NewInt(0)
+			tskcomplete   = big.NewInt(0)
+			tskinprogress = big.NewInt(0)
+			tskmod        = big.NewInt(0)
+		)
+		tsktotal.SetString(task.Keyspace, 10)
+		tskcomplete.SetString(task.KeyspaceCompleted, 10)
+		tskinprogress.SetString(task.KeyspaceInProgress, 10)
+		tskmod.SetString(task.Modifier, 10)
+		tsktotal.Mul(tsktotal, tskmod)
+		tskcomplete.Mul(tskcomplete, tskmod)
+		tskinprogress.Mul(tskinprogress, tskmod)
+
+		bigkeyspace.Add(bigkeyspace, tsktotal)
+		bigkeyspacecomplete.Add(bigkeyspacecomplete, tskcomplete)
+		bigkeyspaceinprogress.Add(bigkeyspaceinprogress, tskinprogress)
+
 		for x, micro := range task.Micros {
+			if time.Now().Add(-2*time.Minute).Unix() > micro.Status.UpdatedAt {
+				debug(fmt.Sprintf("micro.id %d is stale", micro.ID))
+				continue
+			}
+			activeDevices++
+
 			xbig := big.NewInt(micro.Status.SpeedCnt)
 			bigTotalSpdCnt.Add(bigTotalSpdCnt, xbig)
 			debug(fmt.Sprintf("big_speed set to %s", bigTotalSpdCnt.String()))
 
 			xspdbig := big.NewInt(int64(micro.Status.SpeedMS))
 			bigTotalSpdMs.Add(bigTotalSpdMs, xspdbig)
-
 			if x == len(task.Micros)-1 {
-				y := big.NewInt(0)
-				y.SetString(micro.Status.ProgressTotal, 10)
-				bigprogress.Add(bigprogress, y)
 				bigTotalSpdMs.Div(bigTotalSpdMs, big.NewInt(int64(len(task.Micros))))
 			}
 		}
@@ -102,15 +129,22 @@ func displayJob(w io.Writer, job hashstack.Job) {
 
 	if bigTotalSpdMs.Uint64() != 0 {
 		bigspeed = bigTotalSpdMs.Div(bigTotalSpdCnt, bigTotalSpdMs)
+		bigspeed.Mul(bigspeed, big.NewInt(1000))
 	}
-	if bigprogress.Uint64() != 0 {
-		bigeta.Div(bigprogress, bigspeed)
+
+	if bigkeyspace.Uint64() != 0 && bigspeed.Uint64() != 0 {
+		debug("speed /s: " + bigspeed.String())
+		debug("keyspace: " + bigkeyspace.String())
+		bigeta.Div(bigkeyspace, bigspeed)
+		debug("eta seconds: " + bigeta.String())
+		since := time.Now().Unix() - job.FirstTaskTime
+		bigeta.Sub(bigeta, big.NewInt(since))
 	}
-	bigspeed.Mul(bigspeed, big.NewInt(1000))
 
 	strspeed := formatHashRate(bigspeed.Uint64())
-
+	fmt.Fprintf(w, "Active.Devices..: %d\n", activeDevices)
 	fmt.Fprintf(w, "Speed...........: %s\n", strspeed)
+	fmt.Fprintf(w, "Progress........: %s\\%s (%s in progress)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigkeyspaceinprogress.String())
 	fmt.Fprintf(w, "ETA.............: %s\n", prettyUptime(bigeta.Int64()))
 	fmt.Fprintln(w)
 }
@@ -143,8 +177,9 @@ func displayJobs(p hashstack.Project) {
 		writeStdErrAndExit("There are no jobs for this project.")
 	}
 	sort.Slice(jobs, func(i, j int) bool {
-		return jobs[i].CreatedAt > jobs[i].CreatedAt
+		return jobs[i].CreatedAt < jobs[j].CreatedAt
 	})
+
 	for _, j := range jobs {
 		displayJob(os.Stdout, j)
 		fmt.Println()
