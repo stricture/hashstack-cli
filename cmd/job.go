@@ -138,7 +138,9 @@ func displayJob(w io.Writer, job hashstack.Job) {
 		bigeta.Div(bigkeyspace, bigspeed)
 		debug("eta seconds: " + bigeta.String())
 		since := time.Now().Unix() - job.FirstTaskTime
-		bigeta.Sub(bigeta, big.NewInt(since))
+		if bigeta.Int64() > since {
+			bigeta.Sub(bigeta, big.NewInt(since))
+		}
 	}
 
 	strspeed := formatHashRate(bigspeed.Uint64())
