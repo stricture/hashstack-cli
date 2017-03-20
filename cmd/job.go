@@ -164,6 +164,9 @@ func statsJob(job hashstack.Job) {
 	for range c {
 		job = getJob(job.ProjectID, job.ID)
 		displayJob(os.Stdout, job)
+		if job.IsExhausted {
+			break
+		}
 	}
 }
 
