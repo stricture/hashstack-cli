@@ -82,7 +82,7 @@ func deleteHCStat(filename string) {
 	if err := deleteHTTP(path); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
-	fmt.Println("hcstat file deleted successfully")
+	fmt.Println("hcstat file deleted successfully.")
 }
 
 var delHCStatCmd = &cobra.Command{

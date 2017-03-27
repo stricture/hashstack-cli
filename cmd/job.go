@@ -248,7 +248,7 @@ var pauseJobCmd = &cobra.Command{
 		if _, err := patchJSON(path, &update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("THe job has been paused.")
+		fmt.Println("The job has been paused.")
 	},
 }
 
@@ -279,7 +279,7 @@ priority and/or max-devices.
 		if _, err := patchJSON(path, &update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("THe job has been updated.")
+		fmt.Println("The job has been updated.")
 	},
 }
 
@@ -340,7 +340,7 @@ var startJobCmd = &cobra.Command{
 		if _, err := patchJSON(path, &update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("job has been started")
+		fmt.Println("The job has been started.")
 	},
 }
 

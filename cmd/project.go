@@ -196,7 +196,7 @@ var addProjectContributorCmd = &cobra.Command{
 		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("User added to project")
+		fmt.Println("User added to the project.")
 	},
 }
 
@@ -235,7 +235,7 @@ var removeProjectContributorCmd = &cobra.Command{
 		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("User removed from project")
+		fmt.Println("User removed from the project.")
 	},
 }
 

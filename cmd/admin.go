@@ -251,7 +251,7 @@ var adminStartJobCmd = &cobra.Command{
 		if _, err := patchJSON(path, &update); err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-		fmt.Println("job has been started")
+		fmt.Println("The job has been started.")
 	},
 }
 
