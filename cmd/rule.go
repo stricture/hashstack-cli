@@ -43,7 +43,7 @@ func displayRules() {
 
 var ruleCmd = &cobra.Command{
 	Use:   "rules [file_name]",
-	Short: "Display a list of all rule files available on the server (-h or --help for subcommands)",
+	Short: "Display a list of all rule files available on the server (-h or --help for subcommands).",
 	Long: `
 Displays a list of rule files that are stored on the remote server. If file_name is provided, details will be displayed for that specific
 rule file.
@@ -62,8 +62,8 @@ Rule files can be used in jobs. Additional subcommands are available to add and 
 
 var addRuleCmd = &cobra.Command{
 	Use:    "add <file>",
-	Short:  "Upload the provided file to the server",
-	Long:   "Upload the provided file to the server",
+	Short:  "Upload the provided file to the server.",
+	Long:   "Upload the provided file to the server.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
@@ -88,8 +88,8 @@ func deleteRule(filename string) {
 
 var delRuleCmd = &cobra.Command{
 	Use:    "delete <file_name>",
-	Short:  "Delete a file by name from the server",
-	Long:   "Delete a file by name from the server",
+	Short:  "Delete a file by name from the server.",
+	Long:   "Delete a file by name from the server.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {

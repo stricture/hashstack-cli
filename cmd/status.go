@@ -69,8 +69,8 @@ func displayStats() {
 
 var statusCmd = &cobra.Command{
 	Use:    "status",
-	Short:  "Displays information about the Hashstack cluster",
-	Long:   "Displays information about the Hashstack cluster",
+	Short:  "Displays information about the Hashstack cluster.",
+	Long:   "Displays information about the Hashstack cluster.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		displayStats()

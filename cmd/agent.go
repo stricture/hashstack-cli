@@ -60,7 +60,7 @@ func displayAgents() {
 
 var agentCmd = &cobra.Command{
 	Use:   "agents [id]",
-	Short: "Display a list of agents connected to the cluster",
+	Short: "Display a list of agents connected to the cluster.",
 	Long: `
 Display a list of agents connected to the cluster. If an id is provided, only information
 on that agent will be displayed.`,

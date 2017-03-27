@@ -51,8 +51,8 @@ func getServerVersion() (string, error) {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print client and server version and exit",
-	Long:  "Print client and server version and exit",
+	Short: "Print client and server version and exit.",
+	Long:  "Print client and server version and exit.",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Client Version: %s\n", version)
 		serverv, err := getServerVersion()

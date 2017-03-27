@@ -42,7 +42,7 @@ func displayHCStats() {
 
 var hcstatCmd = &cobra.Command{
 	Use:   "hcstats [file_name]",
-	Short: "Display a list of all hc_stat files available on the server (-h or --help for subcommands)",
+	Short: "Display a list of all hc_stat files available on the server (-h or --help for subcommands).",
 	Long: `
 Displays a list of hc_stat files that are stored on the remote server. If file_name is provided, details will be displayed for that specific
 hc_stat file.
@@ -61,8 +61,8 @@ hc_stat files can be used in jobs. Additional subcommands are available to add a
 
 var addHCStatCmd = &cobra.Command{
 	Use:    "add <file>",
-	Short:  "Upload the provided file to the server",
-	Long:   "Upload the provided file to the server",
+	Short:  "Upload the provided file to the server.",
+	Long:   "Upload the provided file to the server.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
@@ -87,8 +87,8 @@ func deleteHCStat(filename string) {
 
 var delHCStatCmd = &cobra.Command{
 	Use:    "delete <file_name>",
-	Short:  "Delete a file by name from the server",
-	Long:   "Delete a file by name from the server",
+	Short:  "Delete a file by name from the server.",
+	Long:   "Delete a file by name from the server.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {

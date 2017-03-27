@@ -44,7 +44,7 @@ func displayWordlists() {
 
 var wordlistCmd = &cobra.Command{
 	Use:   "wordlists [file_name]",
-	Short: "Display a list of all wordlists available on the server (-h or --help for subcommands)",
+	Short: "Display a list of all wordlists available on the server (-h or --help for subcommands).",
 	Long: `
 Displays a list of wordlists that are stored on the remote server. If file_name is provided, details will be displayed for that specific
 wordlist.
@@ -63,8 +63,8 @@ Wordlists can be used in jobs. Additional subcommands are available to add and d
 
 var addWordlistCmd = &cobra.Command{
 	Use:    "add <file>",
-	Short:  "Upload the provided file to the server",
-	Long:   "Upload the provided file to the server",
+	Short:  "Upload the provided file to the server.",
+	Long:   "Upload the provided file to the server.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
@@ -89,8 +89,8 @@ func deleteWordlist(filename string) {
 
 var delWordlistCmd = &cobra.Command{
 	Use:    "delete <file_name>",
-	Short:  "Delete a file by name from the server",
-	Long:   "Delete a file by name from the server",
+	Short:  "Delete a file by name from the server.",
+	Long:   "Delete a file by name from the server.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {

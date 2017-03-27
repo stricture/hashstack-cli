@@ -76,9 +76,9 @@ func displayLists(arg string) {
 
 var listCmd = &cobra.Command{
 	Use:   "lists <project_name|project_id> [list_name|list_id]",
-	Short: "Displays a list of all lists associated with the provided project (-h or --help for subcommands)",
+	Short: "Displays a list of all lists associated with the provided project (-h or --help for subcommands).",
 	Long: `
-Displays a list of all lists associated with the provided project. If list_name|list_id is provied, details will be displayed for 
+Displays a list of all lists associated with the provided project. If list_name|list_id is provied, details will be displayed for
 that specific list. Additional subcommands are available.
 `,
 	PreRun: ensureAuth,
@@ -244,10 +244,10 @@ func uploadList(pid int64, mode int, filename string) {
 
 var addListCmd = &cobra.Command{
 	Use:   "add <project_name|project_id> <mode> <file>",
-	Short: "Add a new list to a project",
+	Short: "Add a new list to a project.",
 	Long: `
 Add a new file containing one or more hashes to a project by project_name or project_id. Modes can be viewed
-using the "modes" subcommand. The file name must be unique across projects.	
+using the "modes" subcommand. The file name must be unique across projects.
 `,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -278,7 +278,7 @@ func deleteList(projectID int64, listID int64) {
 
 var delListCmd = &cobra.Command{
 	Use:   "delete <project_name|project_id> <list_name|list_id>",
-	Short: "Delete a list from a project",
+	Short: "Delete a list from a project.",
 	Long: `
 Delete a list from a project by project_name or project_id. Deleting a list also deletes
 the associated plains.
@@ -299,8 +299,8 @@ the associated plains.
 
 var plainsListCmd = &cobra.Command{
 	Use:   "plains <project_name|project_id> <list_name|list_id>",
-	Short: "Download plains for a list",
-	Long:  "Download plains for a list",
+	Short: "Download plains for a list.",
+	Long:  "Download plains for a list.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
 			writeStdErrAndExit("project_name|project_id and list_id is required.")
@@ -317,8 +317,8 @@ var plainsListCmd = &cobra.Command{
 
 var hashesListCmd = &cobra.Command{
 	Use:   "hashes <project_name|project_id> <list_name|list_id>",
-	Short: "Download hashes for a list",
-	Long:  "Download hashes for a list",
+	Short: "Download hashes for a list.",
+	Long:  "Download hashes for a list.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
 			writeStdErrAndExit("project_name|project_id and list_id is required.")

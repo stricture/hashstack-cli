@@ -41,7 +41,7 @@ func getUsers() []hashstack.User {
 
 var userCmd = &cobra.Command{
 	Use:   "users",
-	Short: "Displays a list of hashstack users",
+	Short: "Displays a list of hashstack users.",
 	Long: `
 You may list users here. Interactions with hashstack for other operations
 should be conducted directly on the server by an administrator.

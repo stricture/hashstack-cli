@@ -129,7 +129,7 @@ func displayProjects() {
 
 var projectCmd = &cobra.Command{
 	Use:   "projects [name|id]",
-	Short: "Display a list of all projects (-h or --help for subcommands)",
+	Short: "Display a list of all projects (-h or --help for subcommands).",
 	Long: `
 Displays a list of your projects. If name or id is provided, details will be displayed for that specific project.
 Additional subcommands are available.
@@ -169,7 +169,7 @@ type updateProjectRequest struct {
 
 var addProjectContributorCmd = &cobra.Command{
 	Use:    "add-contributor  <name|id> <username>",
-	Short:  "Adds a user to the project by username",
+	Short:  "Adds a user to the project by username.",
 	Long:   "Adds a user to the project by username.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -272,7 +272,7 @@ func deleteProject(arg string) {
 
 var delProjectCmd = &cobra.Command{
 	Use:   "delete <name|id>",
-	Short: "Delete a project by name or id",
+	Short: "Delete a project by name or id.",
 	Long: `
 Delete a project by name or id. Deleting a project will delete any associated lists.
 `,
@@ -295,7 +295,7 @@ type projectRequest struct {
 
 var addProjectCmd = &cobra.Command{
 	Use:   "add <project_name> <description>",
-	Short: "Add a new project",
+	Short: "Add a new project.",
 	Long: `
 Add a new project using the provided name and description. The name must be unique across all projects.
 The name should not include special characters or spaces. The description is required.

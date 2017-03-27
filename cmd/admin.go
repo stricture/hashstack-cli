@@ -16,7 +16,7 @@ import (
 
 var adminCmd = &cobra.Command{
 	Use:   "admin",
-	Short: "Executes admin subcommands (-h or --help for more info)",
+	Short: "Executes admin subcommands (-h or --help for more info).",
 	Long: `
 Executes a subcommand as an administrator (-h or --help for a list of subcommands.
     `,
@@ -47,7 +47,7 @@ func getImpersonationToken(username string) string {
 
 var adminImpersonateCmd = &cobra.Command{
 	Use:   "impersonate <username>",
-	Short: "Create an authentication token for another user",
+	Short: "Create an authentication token for another user.",
 	Long: `
 Create an authentication token for another user by username. This
 can be useful when troubleshooting as another user.
@@ -95,8 +95,8 @@ func getAdminProjects() []hashstack.Project {
 
 var adminProjectsCmd = &cobra.Command{
 	Use:    "projects",
-	Short:  "Displays a list of all projects",
-	Long:   "Displays a list of all projects",
+	Short:  "Displays a list of all projects.",
+	Long:   "Displays a list of all projects.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		projects := getAdminProjects()
@@ -139,8 +139,8 @@ func getAdminJobs() []hashstack.Job {
 
 var adminJobsCmd = &cobra.Command{
 	Use:    "jobs",
-	Short:  "Displays a list of all active jobs",
-	Long:   "Displays a list of all active jobs",
+	Short:  "Displays a list of all active jobs.",
+	Long:   "Displays a list of all active jobs.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		jobs := getAdminJobs()
@@ -159,8 +159,8 @@ func getAdminJob(projectID, jobID int64) hashstack.Job {
 
 var adminPauseJobCmd = &cobra.Command{
 	Use:    "job-pause <project_id> <job_id>",
-	Short:  "Pauses a job by project_id and job_id",
-	Long:   "Pauses a job by project_id and job_id",
+	Short:  "Pauses a job by project_id and job_id.",
+	Long:   "Pauses a job by project_id and job_id.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
@@ -190,8 +190,8 @@ var adminPauseJobCmd = &cobra.Command{
 
 var adminDelJobCmd = &cobra.Command{
 	Use:    "job-delete <project_id> <job_id>",
-	Short:  "Deletes a job by project_id and job_id",
-	Long:   "Deletes a job by project_id and job_id",
+	Short:  "Deletes a job by project_id and job_id.",
+	Long:   "Deletes a job by project_id and job_id.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
@@ -226,8 +226,8 @@ var adminDelJobCmd = &cobra.Command{
 
 var adminStartJobCmd = &cobra.Command{
 	Use:    "job-start <project_id> <job_id>",
-	Short:  "Starts a job by project_id and job_id",
-	Long:   "Starts a job by project_id and job_id",
+	Short:  "Starts a job by project_id and job_id.",
+	Long:   "Starts a job by project_id and job_id.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {

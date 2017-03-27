@@ -193,8 +193,8 @@ func displayJobs(p hashstack.Project) {
 
 var jobCmd = &cobra.Command{
 	Use:    "jobs <project_name|project_id> [job_id]",
-	Short:  "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands)",
-	Long:   "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands)",
+	Short:  "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands).",
+	Long:   "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands).",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
@@ -226,8 +226,8 @@ type updateRequest struct {
 
 var pauseJobCmd = &cobra.Command{
 	Use:    "pause <project_name|project_id> <job_id>",
-	Short:  "Pauses a job by project_name|project_id and job_id",
-	Long:   "Pauses a job by project_name|project_id and job_id",
+	Short:  "Pauses a job by project_name|project_id and job_id.",
+	Long:   "Pauses a job by project_name|project_id and job_id.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
@@ -253,8 +253,8 @@ var pauseJobCmd = &cobra.Command{
 }
 
 var updateJobCmd = &cobra.Command{
-	Use:   "update <project_name|project_id> <job_id>",
-	Short: "Updates a job by project_name|project_id and job_id",
+	Use:   "update <project_name|project_id> <job_id>.",
+	Short: "Updates a job by project_name|project_id and job_id.",
 	Long: `
 Updates a job by project_name|project_id and job_id. Can be used to update
 priority and/or max-devices.
@@ -285,8 +285,8 @@ priority and/or max-devices.
 
 var delJobCmd = &cobra.Command{
 	Use:    "delete <project_name|project_id> <job_id>",
-	Short:  "Deletes a job by project_name|project_id and job_id",
-	Long:   "Deletes a job by project_name|project_id and job_id",
+	Short:  "Deletes a job by project_name|project_id and job_id.",
+	Long:   "Deletes a job by project_name|project_id and job_id.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
@@ -318,8 +318,8 @@ var delJobCmd = &cobra.Command{
 
 var startJobCmd = &cobra.Command{
 	Use:    "start <project_name|project_id> <job_id>",
-	Short:  "Starts a job by project_name|project_id and job_id",
-	Long:   "Starts a job by project_name|project_id and job_id",
+	Short:  "Starts a job by project_name|project_id and job_id.",
+	Long:   "Starts a job by project_name|project_id and job_id.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
@@ -378,8 +378,8 @@ type attackRequest struct {
 
 var addJobCmd = &cobra.Command{
 	Use:    "add <project_name|project_id> <list_name|list_id> <name> <wordlist|mask>",
-	Short:  "Add a job for the provided project and list",
-	Long:   "Add a job for the provided project and list",
+	Short:  "Add a job for the provided project and list.",
+	Long:   "Add a job for the provided project and list.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 4 {

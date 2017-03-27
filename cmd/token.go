@@ -23,9 +23,9 @@ type tokenResponse struct {
 
 var loginCmd = &cobra.Command{
 	Use:   "login <server_url> <username>",
-	Short: "Login and cache a session token for the remote server",
+	Short: "Login and cache a session token for the remote server.",
 	Long: `
-This command will prompt for your password and send it along with your username to the server at server_url. 
+This command will prompt for your password and send it along with your username to the server at server_url.
 The token returned along with the server_url will be saved in your home directory for all additional requests.
     `,
 	Run: func(cmd *cobra.Command, args []string) {

@@ -21,8 +21,8 @@ func getMode(mode int) hashstack.HashMode {
 
 var modeCmd = &cobra.Command{
 	Use:    "modes",
-	Short:  "Prints a list of supported hash modes",
-	Long:   "Prints a list of supported hash modes",
+	Short:  "Prints a list of supported hash modes.",
+	Long:   "Prints a list of supported hash modes.",
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		var hashModes []hashstack.HashMode
