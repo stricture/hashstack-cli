@@ -61,6 +61,7 @@ can be useful when troubleshooting as another user.
 		username := args[0]
 		token := getImpersonationToken(username)
 		fmt.Printf("Authentication token for %s: %s\n", username, token)
+		fmt.Println("\nPlace this token in your configuration file.")
 	},
 }
 
