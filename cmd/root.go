@@ -69,6 +69,7 @@ func prettyUptime(uptime int64) string {
 type config struct {
 	ServerURL string `toml:"server_url"`
 	Token     string `toml:"token"`
+	Insecure  bool   `toml:"insecure"`
 }
 
 func debug(msg string) {
@@ -104,13 +105,17 @@ func initcfg() {
 	}
 	flServerURL = cfg.ServerURL
 	flToken = cfg.Token
+	if cfg.Insecure {
+		flInsecure = true
+	}
+	debug(fmt.Sprintf("CONFIG: INSECURE - %v", flInsecure))
 	debug(fmt.Sprintf("CONFIG: SERVER_URL - %s", flServerURL))
 	debug(fmt.Sprintf("CONFIG: TOKEN - %s", flToken))
 }
 
 // writecfg will save the required data to the user's configuration file.
 func writecfg() {
-	tomlString := fmt.Sprintf("server_url = \"%s\"\ntoken = \"%s\"", flServerURL, flToken)
+	tomlString := fmt.Sprintf("server_url = \"%s\"\ntoken = \"%s\"\ninsecure = %v\n", flServerURL, flToken, flInsecure)
 	os.Remove(flCfgFile)
 	os.Mkdir(filepath.Dir(flCfgFile), 0655)
 	fh, err := os.OpenFile(flCfgFile, os.O_CREATE|os.O_WRONLY, 0655)

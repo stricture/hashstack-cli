@@ -32,7 +32,7 @@ func getServerVersion() (string, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
-		if strings.Contains(err.Error(), "cannot validate certificate") {
+		if strings.Contains(err.Error(), "x509") {
 			return "", new(invalidCertError)
 		}
 		return "", new(requestError)

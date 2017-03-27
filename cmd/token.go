@@ -61,7 +61,7 @@ The token returned along with the server_url will be saved in your home director
 		resp, err := http.Post(path, "application/json", bytes.NewBuffer(data))
 		if err != nil {
 			debug(fmt.Sprintf("Error: %s", err.Error()))
-			if strings.Contains(err.Error(), "cannot validate certificate") {
+			if strings.Contains(err.Error(), "x509") {
 				writeStdErrAndExit(new(invalidCertError).Error())
 			}
 			writeStdErrAndExit(new(requestError).Error())
