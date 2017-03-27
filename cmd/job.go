@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/big"
 	"os"
+	"os/signal"
 	"sort"
 	"strconv"
 	"time"
@@ -154,6 +155,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	fmt.Fprintf(w, "Progress........: %s/%s (%s in progress)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigkeyspaceinprogress.String())
 	fmt.Fprintf(w, "ETA.............: %s\n", eta)
 	fmt.Fprintln(w)
+	fmt.Fprintf(w, "Ctrl-C to exit. Job will continue to run.\n")
 }
 
 func getJob(projectID, jobID int64) hashstack.Job {
@@ -167,6 +169,13 @@ func getJob(projectID, jobID int64) hashstack.Job {
 
 func statsJob(job hashstack.Job) {
 	displayJob(os.Stdout, job)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	go func() {
+		<-ch
+		fmt.Println("Interrupt caught. Job will continue to run on the server.")
+		os.Exit(0)
+	}()
 	c := time.Tick(5 * time.Second)
 	for range c {
 		job = getJob(job.ProjectID, job.ID)
