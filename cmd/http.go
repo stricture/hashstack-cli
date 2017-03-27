@@ -22,7 +22,7 @@ type requestError struct {
 }
 
 func (e *requestError) Error() string {
-	return "There was an error completeing the request. The server may not be available."
+	return "There was an error completing the request. The server may not be available."
 }
 
 type authError struct {
