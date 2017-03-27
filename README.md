@@ -13,7 +13,7 @@ Usage:
 
 Available Commands:
   agents      Display a list of agents connected to the cluster
-  hcstats     Display a list of all hc_stat files available on the server (-h or --help for subcommands)
+  hcstats     Display a list of all hcstat files available on the server (-h or --help for subcommands)
   jobs        Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands)
   lists       Displays a list of all lists associated with the provided project (-h or --help for subcommands)
   login       Login and cache a session token for the remote server
