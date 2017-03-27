@@ -146,7 +146,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	strspeed := formatHashRate(bigspeed.Uint64())
 	fmt.Fprintf(w, "Active.Devices..: %d\n", activeDevices)
 	fmt.Fprintf(w, "Speed...........: %s\n", strspeed)
-	fmt.Fprintf(w, "Progress........: %s\\%s (%s in progress)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigkeyspaceinprogress.String())
+	fmt.Fprintf(w, "Progress........: %s/%s (%s in progress)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigkeyspaceinprogress.String())
 	fmt.Fprintf(w, "ETA.............: %s\n", prettyUptime(bigeta.Int64()))
 	fmt.Fprintln(w)
 }
