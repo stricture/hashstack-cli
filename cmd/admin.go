@@ -65,6 +65,28 @@ can be useful when troubleshooting as another user.
 	},
 }
 
+var adminDelAgentCmd = &cobra.Command{
+	Use:   "agent-delete <agent_id>",
+	Short: "Deletes an agent by id.",
+	Long: `
+Delete an agent by id. This does not prevent the agent from
+communicating with the server. This is only useful for when an
+agent is brought offline and will never return.
+    `,
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			writeStdErrAndExit("agent_id is required")
+			return
+		}
+		id := args[0]
+		if err := deleteHTTP(fmt.Sprintf("/api/admin/agents/%s", id)); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("Agent has been deleted.")
+	},
+}
+
 func displayAdminProject(project hashstack.Project) {
 	fmt.Printf("ID........: %d\n", project.ID)
 	fmt.Printf("Name......: %s\n", project.Name)
@@ -262,5 +284,6 @@ func init() {
 	adminCmd.AddCommand(adminPauseJobCmd)
 	adminCmd.AddCommand(adminStartJobCmd)
 	adminCmd.AddCommand(adminDelJobCmd)
+	adminCmd.AddCommand(adminDelAgentCmd)
 	RootCmd.AddCommand(adminCmd)
 }
