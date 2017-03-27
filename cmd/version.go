@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,9 @@ func getServerVersion() (string, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "cannot validate certificate") {
+			return "", new(invalidCertError)
+		}
 		return "", new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {

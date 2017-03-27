@@ -25,6 +25,13 @@ func (e *requestError) Error() string {
 	return "There was an error completing the request. The server may not be available."
 }
 
+type invalidCertError struct {
+}
+
+func (e *invalidCertError) Error() string {
+	return "There was an error while validating the server's TLS certificate. Consider using --insecure."
+}
+
 type authError struct {
 }
 
@@ -113,6 +120,9 @@ func getTotal(path string) (int, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "cannot validate certificate") {
+			return total, new(invalidCertError)
+		}
 		return total, new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
@@ -153,6 +163,9 @@ func getRangeJSON(path string, data interface{}) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "cannot validate certificate") {
+			return new(invalidCertError)
+		}
 		return new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
@@ -182,6 +195,9 @@ func getReader(path string) (io.ReadCloser, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "x509: cannot validate certificate") {
+			return nil, new(invalidCertError)
+		}
 		return nil, new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
@@ -203,6 +219,9 @@ func getJSON(path string, data interface{}) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "x509: cannot validate certificate") {
+			return new(invalidCertError)
+		}
 		return new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
@@ -239,6 +258,9 @@ func postJSON(path string, data interface{}) ([]byte, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "x509: cannot validate certificate") {
+			return nil, new(invalidCertError)
+		}
 		return body, new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
@@ -271,6 +293,9 @@ func patchJSON(path string, data interface{}) ([]byte, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "x509: cannot validate certificate") {
+			return nil, new(invalidCertError)
+		}
 		return body, new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
@@ -298,6 +323,9 @@ func postMultipart(path, contentType string, reader io.Reader) ([]byte, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "x509: cannot validate certificate") {
+			return nil, new(invalidCertError)
+		}
 		return body, new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
@@ -324,6 +352,9 @@ func deleteHTTP(path string) error {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
+		if strings.Contains(err.Error(), "x509: cannot validate certificate") {
+			return new(invalidCertError)
+		}
 		return new(requestError)
 	}
 	if err := statusToError(resp.StatusCode); err != nil {
