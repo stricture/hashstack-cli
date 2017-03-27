@@ -51,7 +51,7 @@ func displayList(list hashstack.List) {
 	fmt.Printf("ID..............: %d\n", list.ID)
 	fmt.Printf("Name............: %s\n", list.Name)
 	fmt.Printf("Hash Mode.......: %d\n", list.HashMode)
-	fmt.Printf("Recoverd........: %s\n", liststat)
+	fmt.Printf("Recovered.......: %s\n", liststat)
 	fmt.Println()
 }
 
