@@ -80,7 +80,7 @@ The token returned along with the server_url will be saved in your home director
 		flServerURL = serverURL
 		flToken = response.Token
 		writecfg()
-		fmt.Printf("Authentication credentials cached in %s.", flCfgFile)
+		fmt.Printf("Authentication credentials cached in %s.\n", flCfgFile)
 	},
 }
 
