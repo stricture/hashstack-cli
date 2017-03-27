@@ -78,7 +78,7 @@ var listCmd = &cobra.Command{
 	Use:   "lists <project_name|project_id> [list_name|list_id]",
 	Short: "Displays a list of all lists associated with the provided project (-h or --help for subcommands).",
 	Long: `
-Displays a list of all lists associated with the provided project. If list_name|list_id is provied, details will be displayed for
+Displays a list of all lists associated with the provided project. If list_name|list_id is provided, details will be displayed for
 that specific list. Additional subcommands are available.
 `,
 	PreRun: ensureAuth,
