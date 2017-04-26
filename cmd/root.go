@@ -84,7 +84,7 @@ var authedSubCommands = []string{
 
 func ensureAuth(cmd *cobra.Command, args []string) {
 	if flServerURL == "" || flToken == "" {
-		writeStdErrAndExit("Use hashstack-cli login before continuing.")
+		writeStdErrAndExit("Use hashstack login before continuing.")
 	}
 }
 
@@ -142,7 +142,7 @@ func initenv() {
 // RootCmd is the root level command for the cli.
 // Executing this command will print the usage information and exit.
 var RootCmd = &cobra.Command{
-	Use:   "hashstack-cli",
+	Use:   "hashstack",
 	Short: "Execute commands against a Hashstack server. Try -h or --help for more information.",
 	Long:  "Execute commands against a Hashstack server. Try -h or --help for more information.",
 	Run: func(cmd *cobra.Command, args []string) {
