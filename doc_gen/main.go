@@ -6,10 +6,11 @@ import (
 )
 
 func main() {
-	doc.GenMarkdownTree(cmd.RootCmd, "./")
+	doc.GenMarkdownTree(cmd.RootCmd, "./markdown")
 	header := &doc.GenManHeader{
-		Title:   "Hashstack-cli",
+		Title:   "hashstack",
 		Section: "1",
 	}
-	doc.GenManTree(cmd.RootCmd, header, "./")
+	header.Source = "Terahash"
+	doc.GenManTree(cmd.RootCmd, header, "./man")
 }
