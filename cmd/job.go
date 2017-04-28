@@ -146,7 +146,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 
 	eta := "Undetermined"
 	if bigeta.Int64() > 0 {
-		prettyUptime(bigeta.Int64())
+		eta = prettyUptime(bigeta.Int64())
 	}
 
 	strspeed := formatHashRate(bigspeed.Uint64())
