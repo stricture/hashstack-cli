@@ -10,6 +10,9 @@ import (
 func displayUser(user hashstack.User) {
 	fmt.Printf("ID.......: %d\n", user.ID)
 	fmt.Printf("Username.: %s\n", user.Username)
+	if len(user.Roles) > 0 {
+		fmt.Printf("Role...: %s\n", user.Roles[0].Role)
+	}
 	fmt.Println()
 }
 
