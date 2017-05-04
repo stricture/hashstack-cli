@@ -173,8 +173,7 @@ func uploadList(pid int64, mode int, filename string) {
 		}
 		bar.Finish()
 		fmt.Println("")
-	}
-	if hashMode.IsBinary && hashMode.IsScrapable {
+	} else if hashMode.IsBinary && hashMode.IsScrapable {
 		_, name := filepath.Split(filename)
 		file, err := os.Open(filename)
 		if err != nil {
@@ -183,20 +182,25 @@ func uploadList(pid int64, mode int, filename string) {
 		}
 		defer file.Close()
 		var hashes []binaryScrapableItem
+		var lineNum int
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
+			lineNum++
 			line := scanner.Text()
 			if line == "" {
 				continue
 			}
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) != 2 {
-				continue
+				writeStdErrAndExit(fmt.Sprintf("Line number %d is not in the format $file_name:$hash!\n\nThis is required for all scrapable multi-hash formats.", lineNum))
 			}
 			hashes = append(hashes, binaryScrapableItem{
 				Filename: parts[0],
 				Hash:     parts[1],
 			})
+		}
+		if len(hashes) < 1 {
+			writeStdErrAndExit("There were no parsable hashes in the provided file")
 		}
 		if err := scanner.Err(); err != nil {
 			debug(fmt.Sprintf("Error: %s", err.Error()))
@@ -212,9 +216,7 @@ func uploadList(pid int64, mode int, filename string) {
 		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
-	}
-
-	if hashMode.IsBinary {
+	} else if hashMode.IsBinary {
 		data, err := ioutil.ReadFile(filename)
 		if err != nil {
 			debug(fmt.Sprintf("Error: %s", err.Error()))
@@ -232,6 +234,8 @@ func uploadList(pid int64, mode int, filename string) {
 		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
+	} else {
+		writeStdErrAndExit("Malformed hash_mode. Please contact support!")
 	}
 
 	var list hashstack.List
