@@ -105,14 +105,14 @@ type binaryRequest struct {
 	Name        string `json:"name"`
 }
 
-type binaryScrapableRequest struct {
-	ProjectID int64                 `json:"project_id"`
-	HashMode  int                   `json:"hash_mode"`
-	Hashes    []binaryScrapableItem `json:"hashes"`
-	Name      string                `json:"name"`
+type multiTrackRequest struct {
+	ProjectID int64            `json:"project_id"`
+	HashMode  int              `json:"hash_mode"`
+	Hashes    []multiTrackItem `json:"hashes"`
+	Name      string           `json:"name"`
 }
 
-type binaryScrapableItem struct {
+type multiTrackItem struct {
 	Hash     string `json:"hash"`
 	Filename string `json:"filename"`
 }
@@ -132,7 +132,7 @@ func uploadList(pid int64, mode int, filename string) {
 	if !hashMode.IsSupported {
 		writeStdErrAndExit("The selected mode is not supported by the server.")
 	}
-	if !hashMode.IsBinary && !hashMode.IsScrapable {
+	if !hashMode.IsBinary && hashMode.Upload == "" {
 		file, err := os.Open(filename)
 		if err != nil {
 			debug(fmt.Sprintf("Error: %s", err.Error()))
@@ -164,7 +164,7 @@ func uploadList(pid int64, mode int, filename string) {
 		bar.SetWidth(80)
 		bar.Start()
 		proxy := bar.NewProxyReader(&body)
-		resp, err = postMultipart(fmt.Sprintf("/api/projects/%d/lists/nonbinary", pid), form.FormDataContentType(), proxy)
+		resp, err = postMultipart(fmt.Sprintf("/api/projects/%d/lists/multi", pid), form.FormDataContentType(), proxy)
 		if err != nil {
 			fmt.Println("")
 			fmt.Println("")
@@ -173,7 +173,7 @@ func uploadList(pid int64, mode int, filename string) {
 		}
 		bar.Finish()
 		fmt.Println("")
-	} else if hashMode.IsBinary && hashMode.IsScrapable {
+	} else if hashMode.Upload != "" {
 		_, name := filepath.Split(filename)
 		file, err := os.Open(filename)
 		if err != nil {
@@ -181,7 +181,7 @@ func uploadList(pid int64, mode int, filename string) {
 			writeStdErrAndExit("There was an error opening the provided file.")
 		}
 		defer file.Close()
-		var hashes []binaryScrapableItem
+		var hashes []multiTrackItem
 		var lineNum int
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
@@ -192,9 +192,9 @@ func uploadList(pid int64, mode int, filename string) {
 			}
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) != 2 {
-				writeStdErrAndExit(fmt.Sprintf("Line number %d is not in the format $file_name:$hash!\n\nThis is required for all scrapable multi-hash formats.", lineNum))
+				writeStdErrAndExit(fmt.Sprintf("Line number %d is not in the format %s!\n\nThis is required for this format.", lineNum, hashMode.Upload))
 			}
-			hashes = append(hashes, binaryScrapableItem{
+			hashes = append(hashes, multiTrackItem{
 				Filename: parts[0],
 				Hash:     parts[1],
 			})
@@ -206,13 +206,13 @@ func uploadList(pid int64, mode int, filename string) {
 			debug(fmt.Sprintf("Error: %s", err.Error()))
 			writeStdErrAndExit("There was an error reading the file.")
 		}
-		req := binaryScrapableRequest{
+		req := multiTrackRequest{
 			ProjectID: pid,
 			HashMode:  hashMode.HashMode,
 			Hashes:    hashes,
 			Name:      name,
 		}
-		resp, err = postJSON(fmt.Sprintf("/api/projects/%d/lists/binaryscrapable", pid), req)
+		resp, err = postJSON(fmt.Sprintf("/api/projects/%d/lists/multitrack", pid), req)
 		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
