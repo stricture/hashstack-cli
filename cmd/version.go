@@ -14,7 +14,7 @@ func init() {
 	RootCmd.AddCommand(versionCmd)
 }
 
-var version = "1.0.1"
+var version = "1.0.2"
 
 type serverVersion struct {
 	Version string `json:"version"`
@@ -37,7 +37,7 @@ func getServerVersion() (string, error) {
 		}
 		return "", new(requestError)
 	}
-	if err := statusToError(resp.StatusCode); err != nil {
+	if err := respToError(resp); err != nil {
 		return "", err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
