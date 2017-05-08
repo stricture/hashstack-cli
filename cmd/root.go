@@ -3,6 +3,7 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
+	"math/big"
 	"net/http"
 	"os"
 	"os/user"
@@ -24,6 +25,12 @@ var (
 func percentOf(current int, all int) float64 {
 	percent := (float64(current) * float64(100)) / float64(all)
 	return percent
+}
+
+func bigPercentOf(current *big.Int, all *big.Int) float64 {
+	current.Mul(current, big.NewInt(100))
+	current.Div(current, all)
+	return float64(current.Int64())
 }
 
 func prettyUptime(uptime int64) string {
