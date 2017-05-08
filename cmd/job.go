@@ -152,7 +152,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	strspeed := formatHashRate(bigspeed.Uint64())
 	fmt.Fprintf(w, "Active.Devices..: %d\n", activeDevices)
 	fmt.Fprintf(w, "Speed...........: %s\n", strspeed)
-	fmt.Fprintf(w, "Progress........: %s/%s (%s in progress)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigkeyspaceinprogress.String())
+	fmt.Fprintf(w, "Progress........: %s/%s (%0.2f%%)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigPercentOf(bigkeyspace, bigkeyspace))
 	fmt.Fprintf(w, "ETA.............: %s\n", eta)
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "Ctrl-C to exit. Job will continue to run.\n")
