@@ -391,9 +391,18 @@ type attackRequest struct {
 }
 
 var addJobCmd = &cobra.Command{
-	Use:    "add <project_name|project_id> <list_name|list_id> <name> <wordlist|mask>",
-	Short:  "Add a job for the provided project and list.",
-	Long:   "Add a job for the provided project and list.",
+	Use:   "add <project_name|project_id> <list_name|list_id> <name> <wordlist|mask>",
+	Short: "Add a job for the provided project and list.",
+	Long: `Add a job for the provided project and list.
+
+
+Attack Modes:
+0 | Straight
+1 | Combination
+3 | Brute-force
+6 | Hybrid Wordlist + Mask
+7 | Hybrid Mask + Wordlist
+`,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 4 {
@@ -521,7 +530,7 @@ var addJobCmd = &cobra.Command{
 }
 
 func init() {
-	addJobCmd.PersistentFlags().IntVarP(&flAttackMode, "attack-mode", "a", 0, "Attack-mode, see references below")
+	addJobCmd.PersistentFlags().IntVarP(&flAttackMode, "attack-mode", "a", 0, "Attack mode, see references above")
 	addJobCmd.PersistentFlags().BoolVar(&flIsHexCharset, "hex-charset", false, "Assume charset is given in hex")
 	addJobCmd.PersistentFlags().StringVar(&flMarkovHcstat, "markov-hcstat", "", "Specify hcstat file to use")
 	addJobCmd.PersistentFlags().IntVarP(&flMarkovThreshold, "markov-threshold", "t", 0, "Threshold X when to stop accepting new markov-chains")
