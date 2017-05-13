@@ -301,10 +301,10 @@ the associated plains.
 	},
 }
 
-var plainsListCmd = &cobra.Command{
-	Use:   "plains <project_name|project_id> <list_name|list_id>",
-	Short: "Download plains for a list.",
-	Long:  "Download plains for a list.",
+var crackedListCmd = &cobra.Command{
+	Use:   "cracked <project_name|project_id> <list_name|list_id>",
+	Short: "Download cracked hashes for a list.",
+	Long:  "Download cracked hashes for a list.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
 			writeStdErrAndExit("project_name|project_id and list_id is required.")
@@ -319,10 +319,10 @@ var plainsListCmd = &cobra.Command{
 	},
 }
 
-var hashesListCmd = &cobra.Command{
-	Use:   "hashes <project_name|project_id> <list_name|list_id>",
-	Short: "Download hashes for a list.",
-	Long:  "Download hashes for a list.",
+var uncrackedListCmd = &cobra.Command{
+	Use:   "uncracked <project_name|project_id> <list_name|list_id>",
+	Short: "Download uncracked hashes for a list.",
+	Long:  "Download uncracked hashes for a list.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 2 {
 			writeStdErrAndExit("project_name|project_id and list_id is required.")
@@ -341,7 +341,7 @@ func init() {
 	addListCmd.PersistentFlags().BoolVar(&flIsHexSalt, "hex-salt", false, "Assume is given in hex")
 	listCmd.AddCommand(addListCmd)
 	listCmd.AddCommand(delListCmd)
-	listCmd.AddCommand(plainsListCmd)
-	listCmd.AddCommand(hashesListCmd)
+	listCmd.AddCommand(crackedListCmd)
+	listCmd.AddCommand(uncrackedListCmd)
 	RootCmd.AddCommand(listCmd)
 }
