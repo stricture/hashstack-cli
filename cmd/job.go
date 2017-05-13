@@ -518,6 +518,7 @@ Attack Modes:
 		}
 		data, err = postJSON(fmt.Sprintf("/api/projects/%d/jobs", project.ID), &jobreq)
 		if err != nil {
+			deleteHTTP(fmt.Sprintf("/api/attacks/%d", plan.ID))
 			writeStdErrAndExit(err.Error())
 		}
 		var job hashstack.Job
