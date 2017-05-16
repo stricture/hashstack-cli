@@ -25,6 +25,6 @@ _testmain.go
 
 hashstack-cli
 .vscode
-doc-gen
+doc_gen
 hashstack
 hashstack.exe
