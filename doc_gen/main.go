@@ -6,11 +6,12 @@ import (
 )
 
 func main() {
+	cmd.RootCmd.DisableAutoGenTag = true
 	doc.GenMarkdownTree(cmd.RootCmd, "./markdown")
 	header := &doc.GenManHeader{
 		Title:   "hashstack",
 		Section: "1",
+		Source:  "Terahash",
 	}
-	header.Source = "Terahash"
 	doc.GenManTree(cmd.RootCmd, header, "./man")
 }
