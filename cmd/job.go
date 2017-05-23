@@ -175,8 +175,6 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	fmt.Fprintf(w, "Speed...........: %s\n", strspeed)
 	fmt.Fprintf(w, "Progress........: %s/%s (%0.2f%%)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigPercentOf(bigkeyspacecomplete, bigkeyspace))
 	fmt.Fprintf(w, "ETA.............: %s\n", eta)
-	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Ctrl-C to exit. Job will continue to run.\n")
 }
 
 func getJob(projectID, jobID int64) hashstack.Job {
@@ -189,7 +187,6 @@ func getJob(projectID, jobID int64) hashstack.Job {
 }
 
 func statsJob(job hashstack.Job) {
-	displayJob(os.Stdout, job)
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 	go func() {
@@ -201,6 +198,7 @@ func statsJob(job hashstack.Job) {
 	for range c {
 		job = getJob(job.ProjectID, job.ID)
 		displayJob(os.Stdout, job)
+		fmt.Fprintf(os.Stdout, "\nCtrl-C to exit. Job will continue to run.\n\n")
 		if job.IsExhausted {
 			break
 		}
@@ -227,16 +225,22 @@ func displayJobs(p hashstack.Project) {
 }
 
 var jobCmd = &cobra.Command{
-	Use:    "jobs <project_name|project_id> [job_id]",
-	Short:  "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands).",
-	Long:   "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands).",
+	Use:   "jobs [project_name|project_id] [job_id]",
+	Short: "Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands).",
+	Long: `
+Display a list of jobs for a project or attach to a job by id (-h or --help for subcommands). If no project is
+provided, then all jobs for all projects will be displayed.
+`,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 1 {
-			cmd.Usage()
-			return
-		}
 		switch len(args) {
+		case 0:
+			projects := getProjects()
+			for _, project := range projects {
+				fmt.Printf("Project.ID......: %d\n", project.ID)
+				fmt.Printf("Project.Name....: %s\n", project.Name)
+				displayJobs(project)
+			}
 		case 1:
 			project := getProject(args[0])
 			displayJobs(project)

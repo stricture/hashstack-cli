@@ -114,7 +114,7 @@ func displayProject(p hashstack.Project) {
 	fmt.Println()
 }
 
-func displayProjects() {
+func getProjects() []hashstack.Project {
 	var projects []hashstack.Project
 	if err := getRangeJSON("/api/projects", &projects); err != nil {
 		writeStdErrAndExit(err.Error())
@@ -122,6 +122,10 @@ func displayProjects() {
 	sort.Slice(projects, func(i, j int) bool {
 		return projects[i].Name < projects[j].Name
 	})
+	return projects
+}
+
+func displayProjects(projects []hashstack.Project) {
 	for _, p := range projects {
 		displayProject(p)
 	}
@@ -151,7 +155,7 @@ Once a project is created, you will upload your lists using the project's name. 
 			return
 		}
 		glDisplayMulti = true
-		displayProjects()
+		displayProjects(getProjects())
 	},
 }
 
