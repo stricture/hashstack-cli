@@ -33,6 +33,15 @@ var (
 	flCustomCharset4      string
 )
 
+func getEvents(projectID, jobID int64) []hashstack.AgentEvent {
+	var events []hashstack.AgentEvent
+	path := fmt.Sprintf("/api/projects/%d/jobs/%d/events", projectID, jobID)
+	if err := getJSON(path, &events); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	return events
+}
+
 func getTasks(projectID, jobID int64) []hashstack.Task {
 	var tasks []hashstack.Task
 	path := fmt.Sprintf("/api/projects/%d/jobs/%d/tasks", projectID, jobID)
@@ -45,6 +54,10 @@ func getTasks(projectID, jobID int64) []hashstack.Task {
 	}
 	return tasks
 }
+
+var (
+	agentEventTrackTime = time.Now().Unix()
+)
 
 func displayJob(w io.Writer, job hashstack.Job) {
 	status := "Running"
@@ -60,6 +73,14 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	}
 	getListByID(&list)
 	mode := getMode(list.HashMode)
+	tasks := getTasks(job.ProjectID, job.ID)
+	events := getEvents(job.ProjectID, job.ID)
+	for _, e := range events {
+		if e.CreatedAt >= agentEventTrackTime {
+			agentEventTrackTime = time.Now().Unix()
+			fmt.Fprintf(w, "Error.Message...: %s\n\n", e.Buffer)
+		}
+	}
 	liststat := fmt.Sprintf("%d/%d (%0.2f%%)", list.RecoveredCount, list.DigestCount, percentOf(int(list.RecoveredCount), int(list.DigestCount)))
 	firstTime := "has not started"
 	if job.FirstTaskTime != 0 {
@@ -76,7 +97,6 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	fmt.Fprintf(w, "Time.Started....: %s\n", firstTime)
 	fmt.Fprintf(w, "Recovered.......: %s\n", liststat)
 
-	tasks := getTasks(job.ProjectID, job.ID)
 	var (
 		bigTotalSpdCnt        = big.NewInt(0)
 		bigTotalSpdMs         = big.NewInt(0)
@@ -150,6 +170,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	}
 
 	strspeed := formatHashRate(bigspeed.Uint64())
+	fmt.Fprintf(w, "Agent.Errors....: %d errors\n", len(events))
 	fmt.Fprintf(w, "Active.Devices..: %d\n", activeDevices)
 	fmt.Fprintf(w, "Speed...........: %s\n", strspeed)
 	fmt.Fprintf(w, "Progress........: %s/%s (%0.2f%%)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigPercentOf(bigkeyspacecomplete, bigkeyspace))
@@ -263,6 +284,41 @@ var pauseJobCmd = &cobra.Command{
 			writeStdErrAndExit(err.Error())
 		}
 		fmt.Println("The job has been paused.")
+	},
+}
+
+var errorJobCmd = &cobra.Command{
+	Use:   "errors <project_name|project_id> <job_id>.",
+	Short: "Displays errors for a job by project_name|project_id and job_id.",
+	Long: `
+Displays errors for a job by project_name|project_id and job_id.
+	`,
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_name|project_id and job_id are required.")
+		}
+		project := getProject(args[0])
+		i, err := strconv.Atoi(args[1])
+		if err != nil {
+			writeStdErrAndExit("job_id is invalid")
+		}
+		job := getJob(project.ID, int64(i))
+		events := getEvents(project.ID, job.ID)
+		agentMap := make(map[int64]hashstack.Agent)
+		for _, e := range events {
+			agent, ok := agentMap[e.AgentID]
+			if !ok {
+				agent = getAgent(e.AgentID)
+				agentMap[e.AgentID] = agent
+			}
+			fmt.Printf("Agent.ID..............: %d\n", agent.ID)
+			fmt.Printf("Agent.Host............: %s\n", agent.Hostname)
+			fmt.Printf("Agent.IP.Address......: %s\n", agent.IPAddress)
+			fmt.Printf("Error.Time............: %s\n", humanize.Time(time.Unix(e.UpdatedAt, 0)))
+			fmt.Printf("Error.Message.........: %s\n", e.Buffer)
+			fmt.Printf("\n")
+		}
 	},
 }
 
@@ -552,5 +608,6 @@ func init() {
 	jobCmd.AddCommand(startJobCmd)
 	jobCmd.AddCommand(updateJobCmd)
 	jobCmd.AddCommand(delJobCmd)
+	jobCmd.AddCommand(errorJobCmd)
 	RootCmd.AddCommand(jobCmd)
 }
