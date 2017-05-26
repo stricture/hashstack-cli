@@ -57,12 +57,13 @@ func getTasks(projectID, jobID int64) []hashstack.Task {
 
 var (
 	agentEventTrackTime = time.Now().Unix()
+	jobListCrackedCount int64
 )
 
 func displayJob(w io.Writer, job hashstack.Job) {
 	status := "Running"
 	if job.IsExhausted {
-		status = "Complete"
+		status = "Finished"
 	}
 	if !job.IsActive && !job.IsExhausted {
 		status = "Paused"
@@ -78,24 +79,15 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	for _, e := range events {
 		if e.CreatedAt >= agentEventTrackTime {
 			agentEventTrackTime = time.Now().Unix()
-			fmt.Fprintf(w, "Error.Message...: %s\n\n", e.Buffer)
+			fmt.Fprintf(w, "There was an error returned from an agent: %s\n\n", e.Buffer)
 		}
 	}
-	liststat := fmt.Sprintf("%d/%d (%0.2f%%)", list.RecoveredCount, list.DigestCount, percentOf(int(list.RecoveredCount), int(list.DigestCount)))
+
+	liststat := fmt.Sprintf("%d/%d (%0.2f%%) hashes", list.RecoveredCount, list.DigestCount, percentOf(int(list.RecoveredCount), int(list.DigestCount)))
 	firstTime := "has not started"
 	if job.FirstTaskTime != 0 {
 		firstTime = humanize.Time(time.Unix(job.FirstTaskTime, 0))
 	}
-	fmt.Fprintf(w, "Name............: %s\n", job.Name)
-	fmt.Fprintf(w, "ID..............: %d\n", job.ID)
-	fmt.Fprintf(w, "Status..........: %s\n", status)
-	fmt.Fprintf(w, "Hash.Type.......: %d (%s)\n", mode.HashMode, mode.Algorithm)
-	fmt.Fprintf(w, "Hash.Target.....: %s\n", list.Name)
-	fmt.Fprintf(w, "Max.Devices.....: %d\n", job.MaxDedicatedDevices)
-	fmt.Fprintf(w, "Priority........: %d\n", job.Priority)
-	fmt.Fprintf(w, "Time.Created....: %s\n", humanize.Time(time.Unix(job.CreatedAt, 0)))
-	fmt.Fprintf(w, "Time.Started....: %s\n", firstTime)
-	fmt.Fprintf(w, "Recovered.......: %s\n", liststat)
 
 	var (
 		bigTotalSpdCnt        = big.NewInt(0)
@@ -170,11 +162,30 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	}
 
 	strspeed := formatHashRate(bigspeed.Uint64())
-	fmt.Fprintf(w, "Agent.Errors....: %d errors\n", len(events))
-	fmt.Fprintf(w, "Active.Devices..: %d\n", activeDevices)
-	fmt.Fprintf(w, "Speed...........: %s\n", strspeed)
-	fmt.Fprintf(w, "Progress........: %s/%s (%0.2f%%)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigPercentOf(bigkeyspacecomplete, bigkeyspace))
-	fmt.Fprintf(w, "ETA.............: %s\n", eta)
+
+	fmt.Fprintf(w, "Job.ID..............: %d\n", job.ID)
+	fmt.Fprintf(w, "Job.Priority........: %d\n", job.Priority)
+	fmt.Fprintf(w, "Job.Name............: %s\n", job.Name)
+	fmt.Fprintf(w, "Job.Status..........: %s\n", status)
+	fmt.Fprintf(w, "Job.Cracked.........: %s\n", liststat)
+	fmt.Fprintf(w, "Job.Progress........: %s/%s (%0.2f%%)\n", bigkeyspacecomplete.String(), bigkeyspace.String(), bigPercentOf(bigkeyspacecomplete, bigkeyspace))
+	fmt.Fprintf(w, "Job.Errors..........: %d errors\n", len(events))
+	fmt.Fprintf(w, "Hash.Mode...........: %d (%s)\n", mode.HashMode, mode.Algorithm)
+	fmt.Fprintf(w, "Hash.Target.........: %s\n", list.Name)
+	fmt.Fprintf(w, "Time.Created........: %s\n", humanize.Time(time.Unix(job.CreatedAt, 0)))
+	fmt.Fprintf(w, "Time.Started........: %s\n", firstTime)
+	fmt.Fprintf(w, "Time.Estimated......: %s\n", eta)
+	fmt.Fprintf(w, "Device.Max..........: %d\n", job.MaxDedicatedDevices)
+	fmt.Fprintf(w, "Device.Active.......: %d\n", activeDevices)
+	fmt.Fprintf(w, "Device.Speed........: %s\n", strspeed)
+
+	if jobListCrackedCount == 0 && list.RecoveredCount != 0 {
+		jobListCrackedCount = list.RecoveredCount
+	}
+	if list.RecoveredCount > jobListCrackedCount {
+		fmt.Fprintf(w, "Use 'hashstack lists cracked %d %d' to view the %d passwords that were cracked\n\n", job.ProjectID, job.ListID, (list.RecoveredCount - jobListCrackedCount))
+		jobListCrackedCount = list.RecoveredCount
+	}
 }
 
 func getJob(projectID, jobID int64) hashstack.Job {
