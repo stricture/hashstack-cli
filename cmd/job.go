@@ -79,14 +79,8 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	for _, e := range events {
 		if e.CreatedAt >= agentEventTrackTime {
 			agentEventTrackTime = time.Now().Unix()
-			fmt.Fprintf(w, "There was an error returned from an agent: %s\n\n", e.Buffer)
+			fmt.Fprintf(w, "There was an error returned from an agent: %s!\n\n", e.Buffer)
 		}
-	}
-
-	liststat := fmt.Sprintf("%d/%d (%0.2f%%) hashes", list.RecoveredCount, list.DigestCount, percentOf(int(list.RecoveredCount), int(list.DigestCount)))
-	firstTime := "has not started"
-	if job.FirstTaskTime != 0 {
-		firstTime = humanize.Time(time.Unix(job.FirstTaskTime, 0))
 	}
 
 	var (
@@ -101,6 +95,7 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	)
 
 	debug(fmt.Sprintf("task length: %d", len(tasks)))
+
 	for _, task := range tasks {
 		debug(fmt.Sprintf("micro length %d", len(task.Micros)))
 		var (
@@ -127,11 +122,9 @@ func displayJob(w io.Writer, job hashstack.Job) {
 				continue
 			}
 			activeDevices++
-
 			xbig := big.NewInt(micro.Status.SpeedCnt)
 			bigTotalSpdCnt.Add(bigTotalSpdCnt, xbig)
 			debug(fmt.Sprintf("big_speed set to %s", bigTotalSpdCnt.String()))
-
 			xspdbig := big.NewInt(int64(micro.Status.SpeedMS))
 			bigTotalSpdMs.Add(bigTotalSpdMs, xspdbig)
 			if x == len(task.Micros)-1 {
@@ -156,12 +149,32 @@ func displayJob(w io.Writer, job hashstack.Job) {
 		}
 	}
 
-	eta := "Undetermined"
+	var (
+		timeETA      = "Undetermined"
+		timeStarted  = "Has not started"
+		timeFinished = "Unknown"
+		timeCreated  string
+	)
 	if bigeta.Int64() > 0 {
-		eta = prettyUptime(bigeta.Int64())
+		etaUnix := time.Now().Add(time.Duration(bigeta.Int64()) * time.Second)
+		timeETA = fmt.Sprintf("%s (%s)", etaUnix.Format(time.UnixDate), humanize.Time(etaUnix))
 	}
 
+	if job.FirstTaskTime != 0 {
+		firstTaskUnix := time.Unix(job.FirstTaskTime, 0)
+		timeStarted = fmt.Sprintf("%s (%s)", firstTaskUnix.Format(time.UnixDate), humanize.Time(firstTaskUnix))
+	}
+
+	if job.LastTaskTime != 0 {
+		lastTaskUnix := time.Unix(job.LastTaskTime, 0)
+		timeFinished = fmt.Sprintf("%s (%s)", lastTaskUnix.Format(time.UnixDate), humanize.Time(lastTaskUnix))
+	}
+
+	createdAtUnix := time.Unix(job.CreatedAt, 0)
+	timeCreated = fmt.Sprintf("%s (%s)", createdAtUnix.Format(time.UnixDate), humanize.Time(createdAtUnix))
+
 	strspeed := formatHashRate(bigspeed.Uint64())
+	liststat := fmt.Sprintf("%d/%d (%0.2f%%) hashes", list.RecoveredCount, list.DigestCount, percentOf(int(list.RecoveredCount), int(list.DigestCount)))
 
 	fmt.Fprintf(w, "Job.ID..............: %d\n", job.ID)
 	fmt.Fprintf(w, "Job.Priority........: %d\n", job.Priority)
@@ -172,9 +185,13 @@ func displayJob(w io.Writer, job hashstack.Job) {
 	fmt.Fprintf(w, "Job.Errors..........: %d errors\n", len(events))
 	fmt.Fprintf(w, "Hash.Mode...........: %d (%s)\n", mode.HashMode, mode.Algorithm)
 	fmt.Fprintf(w, "Hash.Target.........: %s\n", list.Name)
-	fmt.Fprintf(w, "Time.Created........: %s\n", humanize.Time(time.Unix(job.CreatedAt, 0)))
-	fmt.Fprintf(w, "Time.Started........: %s\n", firstTime)
-	fmt.Fprintf(w, "Time.Estimated......: %s\n", eta)
+	fmt.Fprintf(w, "Time.Created........: %s\n", timeCreated)
+	fmt.Fprintf(w, "Time.Started........: %s\n", timeStarted)
+	if status != "Running" {
+		fmt.Fprintf(w, "Time.Finished.......: %s\n", timeFinished)
+		return
+	}
+	fmt.Fprintf(w, "Time.Estimated......: %s\n", timeETA)
 	fmt.Fprintf(w, "Device.Max..........: %d\n", job.MaxDedicatedDevices)
 	fmt.Fprintf(w, "Device.Active.......: %d\n", activeDevices)
 	fmt.Fprintf(w, "Device.Speed........: %s\n", strspeed)
@@ -211,6 +228,7 @@ func statsJob(job hashstack.Job) {
 		displayJob(os.Stdout, job)
 		fmt.Fprintf(os.Stdout, "\nCtrl-C to exit. Job will continue to run.\n\n")
 		if job.IsExhausted {
+			fmt.Printf("The job is finished. View stats using 'hashstack jobs %d %d'\n\n", job.ProjectID, job.ID)
 			break
 		}
 	}
