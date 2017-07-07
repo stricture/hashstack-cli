@@ -342,10 +342,10 @@ Displays errors for a job by project_name|project_id and job_id.
 		for _, e := range events {
 			agent, ok := agentMap[e.AgentID]
 			if !ok {
-				agent = getAgent(e.AgentID)
+				agent = getAgentByID(e.AgentID)
 				agentMap[e.AgentID] = agent
 			}
-			fmt.Printf("Agent.ID..............: %d\n", agent.ID)
+			fmt.Printf("Agent.ID..............: %s\n", agent.UUID)
 			fmt.Printf("Agent.Host............: %s\n", agent.Hostname)
 			fmt.Printf("Agent.IP.Address......: %s\n", agent.IPAddress)
 			fmt.Printf("Error.Time............: %s\n", humanize.Time(time.Unix(e.UpdatedAt, 0)))

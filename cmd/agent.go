@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -11,7 +10,7 @@ import (
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
 
-func getAgent(id int64) hashstack.Agent {
+func getAgentByID(id int64) hashstack.Agent {
 	var agent hashstack.Agent
 	path := fmt.Sprintf("/api/agents/%d", id)
 	if err := getJSON(path, &agent); err != nil {
@@ -20,14 +19,23 @@ func getAgent(id int64) hashstack.Agent {
 	return agent
 }
 
+func getAgent(uuid string) hashstack.Agent {
+	var agent hashstack.Agent
+	path := fmt.Sprintf("/api/agents/%s", uuid)
+	if err := getJSON(path, &agent); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	return agent
+}
+
 func displayAgent(a hashstack.Agent) {
-	agent := getAgent(a.ID)
+	agent := getAgent(a.UUID)
 	memstat := fmt.Sprintf("%s/%s (%2.f%%)",
 		humanize.Bytes(uint64(agent.MemoryUsed)),
 		humanize.Bytes(uint64(agent.MemoryTotal)),
 		percentOf(int(agent.MemoryUsed), int(agent.MemoryTotal)))
 
-	fmt.Printf("ID..............: %d\n", agent.ID)
+	fmt.Printf("ID..............: %s\n", agent.UUID)
 	fmt.Printf("Host............: %s\n", agent.Hostname)
 	fmt.Printf("IP.Address......: %s\n", agent.IPAddress)
 	fmt.Printf("Uptime..........: %s\n", prettyUptime(agent.Uptime))
@@ -70,12 +78,8 @@ on that agent will be displayed.`,
 		case 0:
 			displayAgents()
 		case 1:
-			i, err := strconv.Atoi(args[0])
-			if err != nil {
-				writeStdErrAndExit(fmt.Sprintf("%s is not a valid agent id.", args[0]))
-			}
 			displayAgent(hashstack.Agent{
-				ID: int64(i),
+				UUID: args[0],
 			})
 		default:
 			cmd.Usage()
