@@ -6,7 +6,6 @@ import (
 	"io"
 	"math/big"
 	"os"
-	"os/signal"
 	"sort"
 	"strconv"
 	"time"
@@ -53,6 +52,20 @@ func getTasks(projectID, jobID int64) []hashstack.Task {
 		break
 	}
 	return tasks
+}
+
+func deleteJob(job hashstack.Job) {
+	path := fmt.Sprintf("/api/projects/%d/jobs/%d", job.ProjectID, job.ID)
+	if err := deleteHTTP(path); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	var attack hashstack.Attack
+	if err := getJSON(fmt.Sprintf("/api/attacks/%d", job.AttackID), &attack); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
+		deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
+	}
 }
 
 var (
@@ -212,26 +225,6 @@ func getJob(projectID, jobID int64) hashstack.Job {
 		writeStdErrAndExit(err.Error())
 	}
 	return job
-}
-
-func statsJob(job hashstack.Job) {
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	go func() {
-		<-ch
-		fmt.Println("Interrupt caught. Job will continue to run on the server.")
-		os.Exit(0)
-	}()
-	c := time.Tick(5 * time.Second)
-	for range c {
-		job = getJob(job.ProjectID, job.ID)
-		displayJob(os.Stdout, job)
-		fmt.Fprintf(os.Stdout, "\nCtrl-C to exit. Job will continue to run.\n\n")
-		if job.IsExhausted {
-			fmt.Printf("The job is finished. View stats using 'hashstack jobs %d %d'\n\n", job.ProjectID, job.ID)
-			break
-		}
-	}
 }
 
 func displayJobs(p hashstack.Project) {
@@ -401,20 +394,10 @@ var delJobCmd = &cobra.Command{
 			writeStdErrAndExit("job_id is invalid")
 		}
 		job := getJob(project.ID, int64(i))
-		var attack hashstack.Attack
-		if err := getJSON(fmt.Sprintf("/api/attacks/%d", job.AttackID), &attack); err != nil {
-			writeStdErrAndExit(err.Error())
-		}
 		if ok := promptDelete("this job"); !ok {
 			writeStdErrAndExit("Not deleting job.")
 		}
-		path := fmt.Sprintf("/api/projects/%d/jobs/%d", project.ID, job.ID)
-		if err := deleteHTTP(path); err != nil {
-			writeStdErrAndExit(err.Error())
-		}
-		if attack.Title == fmt.Sprintf("hashstack-cli-%d-%d-%s", job.ProjectID, job.ListID, job.Name) {
-			deleteHTTP(fmt.Sprintf("/api/attacks/%d", job.AttackID))
-		}
+		deleteJob(job)
 		fmt.Println("The job was successfully deleted.")
 	},
 }
