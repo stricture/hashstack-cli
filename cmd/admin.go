@@ -277,6 +277,92 @@ var adminStartJobCmd = &cobra.Command{
 	},
 }
 
+var adminTeamCmd = &cobra.Command{
+	Use:   "teams [name|id]",
+	Short: "Display a list of all teams (-h or --help for subcommands).",
+	Long: `
+Displays a list of your teams. If a name or id is provided, details will be displayed for that specific team.
+Additional subcommands are available.
+
+Teams are used to provide access to projects by adding and remove indiviual users from a team.
+`,
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) > 0 {
+			var team hashstack.Team
+			i, err := strconv.Atoi(args[0])
+			if err != nil {
+				team.Name = args[0]
+			} else {
+				team.ID = int64(i)
+			}
+			displayTeam(false, getTeam(team))
+			return
+		}
+		displayTeams(getTeams())
+	},
+}
+var adminUpdateTeamCmd = &cobra.Command{
+	Use:   "update-team <name|id>",
+	Short: "Modifies a team by it's name or id.",
+	Long: `
+Modifies a team by it's name or id. All values are optional and only provided options will be modified.
+`,
+	PreRun: ensureAuth,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			writeStdErrAndExit("name or id is reuqired.")
+		}
+		var team hashstack.Team
+		teamID, err := strconv.Atoi(args[0])
+		if err != nil {
+			team.Name = args[0]
+		} else {
+			team.ID = int64(teamID)
+		}
+		team = getTeam(team)
+		var contribs []updateContributor
+		for _, c := range team.Contributors {
+			contribs = append(contribs, updateContributor{ID: c.ID})
+		}
+		update := updateTeamReq{
+			Name:         team.Name,
+			Description:  team.Description,
+			IsActive:     true,
+			OwnerUserID:  team.OwnerUserID,
+			Contributors: contribs,
+		}
+		if flTeamName != "" {
+			update.Name = flTeamName
+		}
+		if flTeamDescription != "" {
+			update.Description = flTeamDescription
+		}
+		if flTeamOwnerUsername != "" {
+			user := hashstack.User{
+				Username: flTeamOwnerUsername,
+			}
+			getUser(&user)
+			update.OwnerUserID = user.ID
+		}
+		if flTeamOwnerUserID != 0 {
+			user := hashstack.User{
+				ID: int64(flTeamOwnerUserID),
+			}
+			getUser(&user)
+			update.OwnerUserID = user.ID
+		}
+		data, err := patchJSON(fmt.Sprintf("/api/teams/%d", team.ID), update)
+		if err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		if err := json.Unmarshal(data, &team); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		displayTeam(false, team)
+	},
+}
+
 func init() {
 	adminCmd.AddCommand(adminImpersonateCmd)
 	adminCmd.AddCommand(adminProjectsCmd)
@@ -285,5 +371,11 @@ func init() {
 	adminCmd.AddCommand(adminStartJobCmd)
 	adminCmd.AddCommand(adminDelJobCmd)
 	adminCmd.AddCommand(adminDelAgentCmd)
+	adminUpdateTeamCmd.PersistentFlags().StringVar(&flTeamName, "name", "", "Sets team's name")
+	adminUpdateTeamCmd.PersistentFlags().StringVar(&flTeamDescription, "description", "", "Sets the team's description")
+	adminUpdateTeamCmd.PersistentFlags().StringVar(&flTeamOwnerUsername, "owner-name", "", "Sets the team's owner to the username provided")
+	adminUpdateTeamCmd.PersistentFlags().IntVar(&flTeamOwnerUserID, "owner-id", 0, "Sets the team's owner to the id provided")
+	adminCmd.AddCommand(adminUpdateTeamCmd)
+	adminCmd.AddCommand(adminTeamCmd)
 	RootCmd.AddCommand(adminCmd)
 }
