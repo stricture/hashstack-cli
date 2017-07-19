@@ -53,7 +53,7 @@ type badRequestError struct {
 }
 
 func (e *badRequestError) Error() string {
-	return fmt.Sprintf("There were validation errors in your request that resulted in a 400 status code being returned from the server.\n\nServer Message: %s.\n", e.ServerMsg)
+	return fmt.Sprintf("There were validation errors in your request that resulted in a 400 status code being returned from the server.\n\nServer Message: %s\n", e.ServerMsg)
 }
 
 type notFoundError struct {
@@ -106,7 +106,21 @@ func respToError(resp *http.Response) error {
 			if err := json.Unmarshal(data, &output); err != nil {
 				e.ServerMsg = "No message was returned from the server!"
 			} else {
-				e.ServerMsg = output.Message
+				if val, ok := output.Data["validation"]; ok {
+					e.ServerMsg = output.Message
+					validation, k1 := val.(map[string]interface{})
+					keys, k2 := validation["keys"].([]interface{})
+					values, k3 := validation["values"].([]interface{})
+					if k1 && k2 && k3 && (len(keys) == len(values)) {
+						e.ServerMsg += "\n\nThe following validation errors were identified:\n"
+						for i, k := range keys {
+							e.ServerMsg += fmt.Sprintf("%s - %s", k, values[i])
+						}
+					}
+
+				} else {
+					e.ServerMsg = fmt.Sprintf("%s.", output.Message)
+				}
 			}
 		} else {
 			e.ServerMsg = "No message was returned from the server!"
