@@ -73,7 +73,7 @@ var teamCmd = &cobra.Command{
 	Short: "Display a list of all teams (-h or --help for subcommands).",
 	Long: `
 Displays a list of your teams. If a name or id is provided, details will be displayed for that specific team.
-Additional subcommands are available.addHCStatCmd
+Additional subcommands are available.
 
 Teams are used to provide access to projects by adding and remove indiviual users from a team.
 `,
@@ -169,7 +169,7 @@ type updateTeamReq struct {
 
 var updateTeamCmd = &cobra.Command{
 	Use:   "update <name|id>",
-	Short: "Modifies a team with by it's name or id.",
+	Short: "Modifies a team by it's name or id.",
 	Long: `
 Modifies a team by it's name or id. All values are optional and only provided options will be modified.
 `,
@@ -229,8 +229,8 @@ Modifies a team by it's name or id. All values are optional and only provided op
 }
 
 var addMemberTeamCmd = &cobra.Command{
-	Use:   "add-member <team_name|team_id> <username|user_id>",
-	Short: "Adds a user to a team by the team's name or id and the user's username or id.",
+	Use:   "add-member <team_name|team_id> <username>",
+	Short: "Adds a user to a team by the team's name or id and the user's username.",
 	Long: `
 Adds a user to a team by the team's name or id and the user's username.
 	`,
@@ -247,12 +247,8 @@ Adds a user to a team by the team's name or id and the user's username.
 			team.ID = int64(teamID)
 		}
 		team = getTeam(team)
-		var user hashstack.User
-		userID, err := strconv.Atoi(args[1])
-		if err != nil {
-			user.Username = args[1]
-		} else {
-			user.ID = int64(userID)
+		user := hashstack.User{
+			Username: args[1],
 		}
 		getUser(&user)
 		team.Contributors = append(team.Contributors, user)
@@ -293,12 +289,8 @@ Removes a user from a team by the team's name or id and the user's username.
 			team.ID = int64(teamID)
 		}
 		team = getTeam(team)
-		var user hashstack.User
-		userID, err := strconv.Atoi(args[1])
-		if err != nil {
-			user.Username = args[1]
-		} else {
-			user.ID = int64(userID)
+		user := hashstack.User{
+			Username: args[1],
 		}
 		getUser(&user)
 		var contribs []updateContributor
