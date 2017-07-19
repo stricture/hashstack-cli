@@ -53,7 +53,7 @@ func displayStats() {
 			online = "Online "
 		}
 		for i, d := range agent.Devices {
-			fmt.Printf("Agent.%s.Dev.#%0.2d..: %s %s, %4d Mhz, %3d%% load, %2dC, %3d%% Fan\n",
+			fmt.Printf("Agent.%s.Dev.#%0.2d...: %s %s, %4d Mhz, %3d%% load, %2dC, %3d%% Fan\n",
 				agent.UUID,
 				i+1,
 				online,
