@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
-
-	"strconv"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -103,12 +102,18 @@ func displayProject(p hashstack.Project) {
 	fmt.Printf("Jobs.............: %s\n", jobstat)
 	fmt.Printf("Lists............: %d\n", listCount)
 	fmt.Printf("Owner............: %s\n", owner)
-	if !glDisplayMulti && len(p.Contributors) > 0 {
+	if !glDisplayMulti {
 		var names []string
 		for _, u := range p.Contributors {
 			names = append(names, u.Username)
 		}
 		fmt.Printf("Contributors.....: %s\n", strings.Join(names, ", "))
+		var teams []string
+		for _, t := range p.Teams {
+			teams = append(teams, t.Name)
+		}
+		fmt.Printf("Teams............: %s\n", strings.Join(teams, ", "))
+
 	}
 	fmt.Printf("Last Updated.....: %s\n", humanize.Time(time.Unix(p.UpdatedAt, 0)))
 	fmt.Println()
@@ -169,6 +174,81 @@ type updateProjectRequest struct {
 	IsActive     bool   `json:"is_active"`
 	OwnerUserID  int64  `json:"owner_user_id"`
 	Contributors []updateContributor
+	Teams        []updateContributor
+}
+
+var addProjectTeamCmd = &cobra.Command{
+	Use:   "add-team <project_name|project_id> <team_name>",
+	Short: "Adds a team to the project.",
+	Long:  "Adds a team to the project.",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_name or project_id and team_name is required.")
+		}
+		project := getProject(args[0])
+		var contribs []updateContributor
+		var teams []updateContributor
+		for _, c := range project.Contributors {
+			contribs = append(contribs, updateContributor{ID: c.ID})
+		}
+		team := getTeam(hashstack.Team{
+			Name: args[1],
+		})
+		project.Teams = append(project.Teams, team)
+		for _, t := range project.Teams {
+			teams = append(teams, updateContributor{ID: t.ID})
+		}
+		update := updateProjectRequest{
+			Name:         project.Name,
+			Description:  project.Description,
+			IsActive:     project.IsActive,
+			OwnerUserID:  project.OwnerUserID,
+			Contributors: contribs,
+			Teams:        teams,
+		}
+		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("Team has been added to the project.")
+	},
+}
+
+var removeProjectTeamCmd = &cobra.Command{
+	Use:   "remove-team <project_name|project_id> <team_name>",
+	Short: "Removes a team from the project.",
+	Long:  "Removes a team from the project.",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			writeStdErrAndExit("project_name or project_id and team_name is required.")
+		}
+		project := getProject(args[0])
+		var contribs []updateContributor
+		var teams []updateContributor
+		for _, c := range project.Contributors {
+			contribs = append(contribs, updateContributor{ID: c.ID})
+		}
+		team := getTeam(hashstack.Team{
+			Name: args[1],
+		})
+		for _, t := range project.Teams {
+			if t.ID == team.ID {
+				continue
+			}
+			teams = append(teams, updateContributor{ID: t.ID})
+		}
+		update := updateProjectRequest{
+			Name:         project.Name,
+			Description:  project.Description,
+			IsActive:     project.IsActive,
+			OwnerUserID:  project.OwnerUserID,
+			Contributors: contribs,
+			Teams:        teams,
+		}
+		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
+			writeStdErrAndExit(err.Error())
+		}
+		fmt.Println("Team has been removed from the project.")
+	},
 }
 
 var addProjectContributorCmd = &cobra.Command{
@@ -187,8 +267,12 @@ var addProjectContributorCmd = &cobra.Command{
 		getUser(&user)
 		project.Contributors = append(project.Contributors, user)
 		var contribs []updateContributor
+		var teams []updateContributor
 		for _, c := range project.Contributors {
 			contribs = append(contribs, updateContributor{ID: c.ID})
+		}
+		for _, t := range project.Teams {
+			teams = append(teams, updateContributor{ID: t.ID})
 		}
 		update := updateProjectRequest{
 			Name:         project.Name,
@@ -196,6 +280,7 @@ var addProjectContributorCmd = &cobra.Command{
 			IsActive:     project.IsActive,
 			OwnerUserID:  project.OwnerUserID,
 			Contributors: contribs,
+			Teams:        teams,
 		}
 		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
 			writeStdErrAndExit(err.Error())
@@ -221,6 +306,7 @@ var removeProjectContributorCmd = &cobra.Command{
 			Username: args[1],
 		}
 		getUser(&user)
+		var teams []updateContributor
 		var contribs []updateContributor
 		for _, c := range project.Contributors {
 			if c.ID == user.ID {
@@ -228,12 +314,16 @@ var removeProjectContributorCmd = &cobra.Command{
 			}
 			contribs = append(contribs, updateContributor{ID: c.ID})
 		}
+		for _, t := range project.Teams {
+			teams = append(teams, updateContributor{ID: t.ID})
+		}
 		update := updateProjectRequest{
 			Name:         project.Name,
 			Description:  project.Description,
 			IsActive:     project.IsActive,
 			OwnerUserID:  project.OwnerUserID,
 			Contributors: contribs,
+			Teams:        teams,
 		}
 
 		if _, err := patchJSON(fmt.Sprintf("/api/projects/%d", project.ID), update); err != nil {
@@ -331,5 +421,7 @@ func init() {
 	projectCmd.AddCommand(delProjectCmd)
 	projectCmd.AddCommand(addProjectContributorCmd)
 	projectCmd.AddCommand(removeProjectContributorCmd)
+	projectCmd.AddCommand(addProjectTeamCmd)
+	projectCmd.AddCommand(removeProjectTeamCmd)
 	RootCmd.AddCommand(projectCmd)
 }
