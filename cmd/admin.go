@@ -277,29 +277,28 @@ var adminStartJobCmd = &cobra.Command{
 	},
 }
 
+func getAdminTeams() []hashstack.Team {
+	var teams []hashstack.Team
+	if err := getJSON("/api/admin/teams", &teams); err != nil {
+		writeStdErrAndExit(err.Error())
+	}
+	sort.Slice(teams, func(i, j int) bool {
+		return teams[i].Name < teams[j].Name
+	})
+	return teams
+}
+
 var adminTeamCmd = &cobra.Command{
-	Use:   "teams [name|id]",
-	Short: "Display a list of all teams (-h or --help for subcommands).",
+	Use:   "teams",
+	Short: "Display a list of all teams.",
 	Long: `
-Displays a list of your teams. If a name or id is provided, details will be displayed for that specific team.
-Additional subcommands are available.
+Displays a list of all teams.
 
 Teams are used to provide access to projects by adding and remove indiviual users from a team.
 `,
 	PreRun: ensureAuth,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 0 {
-			var team hashstack.Team
-			i, err := strconv.Atoi(args[0])
-			if err != nil {
-				team.Name = args[0]
-			} else {
-				team.ID = int64(i)
-			}
-			displayTeam(false, getTeam(team))
-			return
-		}
-		displayTeams(getTeams())
+		displayTeams(getAdminTeams())
 	},
 }
 var adminUpdateTeamCmd = &cobra.Command{
