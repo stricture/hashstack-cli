@@ -47,11 +47,11 @@ func getList(projectID int64, arg string) hashstack.List {
 }
 
 func displayList(list hashstack.List) {
-	liststat := fmt.Sprintf("%d/%d (%d%%)", list.RecoveredCount, list.DigestCount, list.RecoveredCount/list.DigestCount)
+	liststat := fmt.Sprintf("%d/%d (%0.2f%%) hashes", list.RecoveredCount, list.DigestCount, percentOf(int(list.RecoveredCount), int(list.DigestCount)))
 	fmt.Printf("ID..............: %d\n", list.ID)
 	fmt.Printf("Name............: %s\n", list.Name)
 	fmt.Printf("Hash Mode.......: %d\n", list.HashMode)
-	fmt.Printf("Recovered.......: %s\n", liststat)
+	fmt.Printf("Cracked.........: %s\n", liststat)
 	fmt.Println()
 }
 
