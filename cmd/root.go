@@ -124,7 +124,7 @@ func initcfg() {
 func writecfg() {
 	tomlString := fmt.Sprintf("server_url = \"%s\"\ntoken = \"%s\"\ninsecure = %v\n", flServerURL, flToken, flInsecure)
 	os.Remove(flCfgFile)
-	os.Mkdir(filepath.Dir(flCfgFile), 0655)
+	os.Mkdir(filepath.Dir(flCfgFile), 0755)
 	fh, err := os.OpenFile(flCfgFile, os.O_CREATE|os.O_WRONLY, 0655)
 	if err != nil {
 		debug(fmt.Sprintf("Error: %s", err.Error()))
