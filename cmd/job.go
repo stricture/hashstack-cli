@@ -234,7 +234,8 @@ func displayJobs(p hashstack.Project) {
 		writeStdErrAndExit(err.Error())
 	}
 	if len(jobs) < 1 {
-		writeStdErrAndExit("There are no jobs for this project.")
+		fmt.Printf("There are no jobs for this project.\n\n")
+		return
 	}
 	sort.Slice(jobs, func(i, j int) bool {
 		return jobs[i].CreatedAt < jobs[j].CreatedAt
