@@ -160,7 +160,11 @@ Once a project is created, you will upload your lists using the project's name. 
 			return
 		}
 		glDisplayMulti = true
-		displayProjects(getProjects())
+		projects := getProjects()
+		if len(projects) < 1 {
+			writeStdErrAndExit("You have not created any projects!")
+		}
+		displayProjects(projects)
 	},
 }
 
