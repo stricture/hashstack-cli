@@ -541,7 +541,7 @@ Attack Modes:
 			step.CustomCharset4 = flCustomCharset4
 			step.IsHexCharset = flIsHexCharset
 		case 6:
-			if len(args) < 4 {
+			if len(args) < 5 {
 				writeStdErrAndExit("A wordlist file and mask are required for this attack mode.")
 			}
 			var wordlistFile hashstack.File
@@ -552,7 +552,7 @@ Attack Modes:
 			step.WordlistID = wordlistFile.ID
 			step.Mask = args[4]
 		case 7:
-			if len(args) < 4 {
+			if len(args) < 5 {
 				writeStdErrAndExit("A mask and wordlist file are required for this attack mode.")
 			}
 			var wordlistFile hashstack.File
