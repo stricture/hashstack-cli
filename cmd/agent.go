@@ -44,7 +44,7 @@ func displayAgent(a hashstack.Agent) {
 	fmt.Printf("ID..............: %s\n", agent.UUID)
 	fmt.Printf("Host............: %s\n", agent.Hostname)
 	fmt.Printf("IP.Address......: %s\n", agent.IPAddress)
-	fmt.Printf("Status..........: %s\n", isOnline)
+	fmt.Printf("Status..........: %s\n", online)
 	fmt.Printf("Uptime..........: %s\n", prettyUptime(agent.Uptime))
 	fmt.Printf("Last.Seen.......: %s\n", humanize.Time(time.Unix(agent.CheckinAt, 0)))
 	fmt.Printf("Memory..........: %s\n", memstat)
