@@ -212,10 +212,12 @@ func uploadList(pid int64, mode int, filename string) {
 			Hashes:    hashes,
 			Name:      name,
 		}
+		fmt.Printf("Uploading %d hashes from %s...\n", len(hashes), name)
 		resp, err = postJSON(fmt.Sprintf("/api/projects/%d/lists/multitrack", pid), req)
 		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
+		fmt.Printf("Upload complete...\n\n")
 	} else if hashMode.IsBinary {
 		data, err := ioutil.ReadFile(filename)
 		if err != nil {
@@ -230,10 +232,13 @@ func uploadList(pid int64, mode int, filename string) {
 			Filename:    name,
 			Name:        name,
 		}
+
+		fmt.Printf("Uploading binary hash from %s...\n", name)
 		resp, err = postJSON(fmt.Sprintf("/api/projects/%d/lists/binary", pid), req)
 		if err != nil {
 			writeStdErrAndExit(err.Error())
 		}
+		fmt.Printf("Upload complete...\n\n")
 	} else {
 		writeStdErrAndExit("Malformed hash_mode. Please contact support!")
 	}
