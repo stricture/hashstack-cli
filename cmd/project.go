@@ -99,6 +99,7 @@ func displayProject(p hashstack.Project) {
 	}
 	fmt.Printf("ID...............: %d\n", p.ID)
 	fmt.Printf("Name.............: %s\n", p.Name)
+	fmt.Printf("Description......: %s\n", p.Description)
 	fmt.Printf("Jobs.............: %s\n", jobstat)
 	fmt.Printf("Lists............: %d\n", listCount)
 	fmt.Printf("Owner............: %s\n", owner)
