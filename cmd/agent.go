@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
 	"sort"
+	"strings"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -60,14 +63,38 @@ func displayAgent(a hashstack.Agent) {
 	fmt.Println()
 }
 
+var (
+	flAgentSortOrder string
+)
+
 func displayAgents() {
 	var agents []hashstack.Agent
 	if err := getRangeJSON("/api/agents", &agents); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
-	sort.Slice(agents, func(i, j int) bool {
-		return agents[i].CreatedAt > agents[j].CreatedAt
-	})
+	switch flAgentSortOrder {
+	case "created_at":
+		sort.Slice(agents, func(i, j int) bool {
+			return agents[i].CreatedAt > agents[j].CreatedAt
+		})
+	case "hostname":
+		sort.Slice(agents, func(i, j int) bool {
+			si := agents[i].Hostname
+			sj := agents[j].Hostname
+			silower := strings.ToLower(si)
+			sjlower := strings.ToLower(sj)
+			if silower == sjlower {
+				return si < sj
+			}
+			return silower < sjlower
+		})
+	default:
+		sort.Slice(agents, func(i, j int) bool {
+			first := net.ParseIP(agents[i].IPAddress).To4()
+			second := net.ParseIP(agents[j].IPAddress).To4()
+			return binary.BigEndian.Uint32(first) < binary.BigEndian.Uint32(second)
+		})
+	}
 	for _, a := range agents {
 		displayAgent(a)
 	}
@@ -95,5 +122,6 @@ on that agent will be displayed.`,
 }
 
 func init() {
+	agentCmd.PersistentFlags().StringVar(&flAgentSortOrder, "sort", "ip", "Sort order for agents. Values can be 'ip', 'hostname', or 'created_at'")
 	RootCmd.AddCommand(agentCmd)
 }
