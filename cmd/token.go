@@ -56,7 +56,7 @@ The token returned along with the server_url will be saved in your home director
 			debug(fmt.Sprintf("Error: %s", err.Error()))
 			writeStdErrAndExit("There was an error preparing your request for the server")
 		}
-		path := fmt.Sprintf("%s/token", serverURL)
+		path := fmt.Sprintf("%s/token", strings.TrimRight(serverURL, "/"))
 		debug(fmt.Sprintf("HTTP: POST %s", path))
 		resp, err := http.Post(path, "application/json", bytes.NewBuffer(data))
 		if err != nil {
