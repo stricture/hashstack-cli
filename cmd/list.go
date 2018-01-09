@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/cheggaaa/pb"
 	"github.com/spf13/cobra"
@@ -139,38 +139,60 @@ func uploadList(pid int64, mode int, filename string) {
 			writeStdErrAndExit("There was an error opening the provided file.")
 		}
 		defer file.Close()
-		var body bytes.Buffer
-		form := multipart.NewWriter(&body)
-		_, name := filepath.Split(file.Name())
-		part, err := form.CreateFormFile("file", file.Name())
+
+		_, filenamesplit := filepath.Split(file.Name())
+		filestat, err := file.Stat()
+		if err != nil {
+			debug(fmt.Sprintf("Error: %s", err.Error()))
+			writeStdErrAndExit("There was an error getting stats for the file provided")
+		}
+		filesize := filestat.Size()
+
+		pipeOut, pipeIn := io.Pipe()
+		writer := multipart.NewWriter(pipeIn)
+
+		bar := pb.New64(filesize).SetUnits(pb.U_BYTES)
+		bar.SetWidth(80)
+
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			resp, err = postMultipart(fmt.Sprintf("/api/projects/%d/lists/multi", pid), writer.FormDataContentType(), pipeOut)
+			if err != nil {
+				fmt.Println("")
+				fmt.Println("")
+				fmt.Println("This error likely occurred because you did not have any valid hashes.")
+				writeStdErrAndExit(err.Error())
+			}
+			wg.Done()
+		}()
+
+		part, err := writer.CreateFormFile("file", file.Name())
 		if err != nil {
 			debug(fmt.Sprintf("Error: %s", err.Error()))
 			writeStdErrAndExit(new(requestCreateError).Error())
 		}
-		if _, err := io.Copy(part, file); err != nil {
+
+		out := io.MultiWriter(part, bar)
+
+		bar.Start()
+
+		if _, err := io.Copy(out, file); err != nil {
 			debug(fmt.Sprintf("Error: %s", err.Error()))
 			writeStdErrAndExit("There was an error reading the provided file.")
 		}
-		form.WriteField("hash_mode", strconv.Itoa(hashMode.HashMode))
-		form.WriteField("name", name)
+		writer.WriteField("hash_mode", strconv.Itoa(hashMode.HashMode))
+		writer.WriteField("name", filenamesplit)
 		isHexSaltStr := "false"
 		if flIsHexSalt {
 			isHexSaltStr = "true"
 		}
-		form.WriteField("is_hex_salt", isHexSaltStr)
-		form.Close()
-		// Proxy request through progress bar.
-		bar := pb.New(body.Len()).SetUnits(pb.U_BYTES)
-		bar.SetWidth(80)
-		bar.Start()
-		proxy := bar.NewProxyReader(&body)
-		resp, err = postMultipart(fmt.Sprintf("/api/projects/%d/lists/multi", pid), form.FormDataContentType(), proxy)
-		if err != nil {
-			fmt.Println("")
-			fmt.Println("")
-			fmt.Println("This error likely occurred because you did not have any valid hashes.")
-			writeStdErrAndExit(err.Error())
-		}
+		writer.WriteField("is_hex_salt", isHexSaltStr)
+
+		writer.Close()
+		pipeIn.Close()
+		wg.Wait()
+
 		bar.Finish()
 		fmt.Println("")
 	} else if hashMode.Upload != "" {
