@@ -5,6 +5,7 @@ mkdir -p $build_dir/{linux,osx,windows}
 
 echo "Updating dependencies"
 go get -u
+go get github.com/inconshreveable/mousetrap
 
 echo "Building Linux"
 go build -o hashstack
