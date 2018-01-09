@@ -4,7 +4,7 @@ build_dir="hashstack-cli_$1"
 mkdir -p $build_dir/{linux,osx,windows}
 
 echo "Updating dependencies"
-#go get -u
+go get -u
 
 echo "Building Linux"
 go build -o hashstack
@@ -20,6 +20,7 @@ mv hashstack "$build_dir/osx/"
 
 echo "Generating man pages"
 cd doc_gen
+go get -u
 mkdir man
 go build
 ./doc_gen
