@@ -31,7 +31,8 @@ func statsJob(job hashstack.Job) {
 		displayJob(os.Stdout, job)
 		fmt.Fprintf(os.Stdout, "\nCtrl-C to exit, the job will continue to run. Ctrl-\\ to abort, the job will be removed.\n\n")
 		if job.IsExhausted {
-			fmt.Printf("The job is finished. View stats using 'hashstack jobs %d %d'\n\n", job.ProjectID, job.ID)
+			fmt.Printf("The job is finished. View stats using 'hashstack jobs %d %d'.\n\n", job.ProjectID, job.ID)
+			fmt.Println("Lists may continue to be updated with recovered plains after the job has finished.")
 			break
 		}
 	}
