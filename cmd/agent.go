@@ -72,6 +72,9 @@ func displayAgents() {
 	if err := getRangeJSON("/api/agents", &agents); err != nil {
 		writeStdErrAndExit(err.Error())
 	}
+	if len(agents) < 1 {
+		writeStdErrAndExit("There are no agents in the cluster!")
+	}
 	switch flAgentSortOrder {
 	case "created_at":
 		sort.Slice(agents, func(i, j int) bool {
