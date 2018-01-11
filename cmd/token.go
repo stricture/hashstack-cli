@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"net/url"
@@ -20,6 +21,17 @@ type tokenRequest struct {
 
 type tokenResponse struct {
 	Token string `json:"token"`
+}
+
+var logoutCmd = &cobra.Command{
+	Use:   "logout",
+	Short: "Logout by removing your session token from the configuration file.",
+	Long: `
+Logout by removing your session token from the configuration file.
+`,
+	Run: func(cmd *cobra.Command, args []string) {
+		os.Remove(flCfgFile)
+	},
 }
 
 var loginCmd = &cobra.Command{
@@ -90,4 +102,5 @@ The token returned along with the server_url will be saved in your home director
 
 func init() {
 	RootCmd.AddCommand(loginCmd)
+	RootCmd.AddCommand(logoutCmd)
 }
