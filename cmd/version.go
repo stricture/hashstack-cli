@@ -14,7 +14,7 @@ func init() {
 	RootCmd.AddCommand(versionCmd)
 }
 
-var version = "1.2.1"
+var version = "1.2.2"
 
 type serverVersion struct {
 	Version string `json:"version"`
