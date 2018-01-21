@@ -148,6 +148,10 @@ func uploadList(pid int64, mode int, filename string) {
 		}
 		filesize := filestat.Size()
 
+		if filesize > int64(15*1024*1024) {
+			writeStdErrAndExit("This list exceeds the maximum size supported by the server (15 MB).")
+		}
+
 		pipeOut, pipeIn := io.Pipe()
 		writer := multipart.NewWriter(pipeIn)
 
@@ -178,7 +182,11 @@ func uploadList(pid int64, mode int, filename string) {
 		bar.Start()
 
 		if _, err := io.Copy(out, file); err != nil {
+			bar.Finish()
 			debug(fmt.Sprintf("Error: %s", err.Error()))
+			if err.Error() == "io: read/write on closed pipe" {
+				writeStdErrAndExit("The list exceeded the maxmimum size supported by the server (15 MB).")
+			}
 			writeStdErrAndExit("There was an error reading the provided file.")
 		}
 		writer.WriteField("hash_mode", strconv.Itoa(hashMode.HashMode))
