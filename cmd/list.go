@@ -148,8 +148,8 @@ func uploadList(pid int64, mode int, filename string) {
 		}
 		filesize := filestat.Size()
 
-		if filesize > int64(15*1024*1024) {
-			writeStdErrAndExit("This list exceeds the maximum size supported by the server (15 MB).")
+		if filesize > int64(64*1024*1024) {
+			writeStdErrAndExit("This list exceeds the maximum size supported by the server (64 MB).")
 		}
 
 		pipeOut, pipeIn := io.Pipe()
@@ -185,7 +185,7 @@ func uploadList(pid int64, mode int, filename string) {
 			bar.Finish()
 			debug(fmt.Sprintf("Error: %s", err.Error()))
 			if err.Error() == "io: read/write on closed pipe" {
-				writeStdErrAndExit("The list exceeded the maxmimum size supported by the server (15 MB).")
+				writeStdErrAndExit("The list exceeded the maxmimum size supported by the server (64 MB).")
 			}
 			writeStdErrAndExit("There was an error reading the provided file.")
 		}
