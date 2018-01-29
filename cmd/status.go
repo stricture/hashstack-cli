@@ -43,6 +43,12 @@ func displayStats() {
 	fmt.Printf("Load.CPU.............................................: %s\n", cpuload)
 	fmt.Printf("Temp.GPU.............................................: %dC - %dC\n", stats.LowestGPUTemp, stats.HighestGPUTemp)
 	fmt.Printf("Temp.CPU.............................................: %dC - %dC\n", stats.LowestCPUTemp, stats.HighestCPUTemp)
+
+	if flStatusSimple {
+		fmt.Println()
+		return
+	}
+
 	var agents []hashstack.Agent
 	if err := getRangeJSON("/api/agents", &agents); err != nil {
 		writeStdErrAndExit(err.Error())
