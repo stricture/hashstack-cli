@@ -10,6 +10,10 @@ import (
 	hashstack "github.com/stricture/hashstack-server-core-ng"
 )
 
+var (
+	flStatusSimple bool
+)
+
 func displayStats() {
 	var stats hashstack.ClusterStats
 	if err := getJSON("/api/stats", &stats); err != nil {
@@ -78,5 +82,6 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
+	statusCmd.PersistentFlags().BoolVar(&flStatusSimple, "simple", false, "Display information about the cluster without showing each of the individual agents and devices.")
 	RootCmd.AddCommand(statusCmd)
 }
