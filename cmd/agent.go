@@ -31,6 +31,10 @@ func getAgent(uuid string) hashstack.Agent {
 	return agent
 }
 
+func isOnline(agent hashstack.Agent) bool {
+	return time.Now().Add(-5*time.Minute).Unix() < agent.CheckinAt
+}
+
 func displayAgent(a hashstack.Agent) {
 	agent := getAgent(a.UUID)
 	memstat := fmt.Sprintf("%s/%s (%2.f%%)",
@@ -39,8 +43,7 @@ func displayAgent(a hashstack.Agent) {
 		percentOf(int(agent.MemoryUsed), int(agent.MemoryTotal)))
 
 	online := "Offline"
-	isOnline := time.Now().Add(-5*time.Minute).Unix() < agent.CheckinAt
-	if isOnline {
+	if isOnline(agent) {
 		online = "Online"
 	}
 
@@ -64,7 +67,8 @@ func displayAgent(a hashstack.Agent) {
 }
 
 var (
-	flAgentSortOrder string
+	flAgentSortOrder      string
+	flAgentShowOnlineOnly bool
 )
 
 func displayAgents() {
@@ -99,6 +103,9 @@ func displayAgents() {
 		})
 	}
 	for _, a := range agents {
+		if flAgentShowOnlineOnly && !isOnline(a) {
+			continue
+		}
 		displayAgent(a)
 	}
 }
@@ -126,5 +133,6 @@ on that agent will be displayed.`,
 
 func init() {
 	agentCmd.PersistentFlags().StringVar(&flAgentSortOrder, "sort", "ip", "Sort order for agents. Values can be 'ip', 'hostname', or 'created_at'")
+	agentCmd.PersistentFlags().BoolVar(&flAgentShowOnlineOnly, "show-online", false, "Show only online agents.")
 	RootCmd.AddCommand(agentCmd)
 }
